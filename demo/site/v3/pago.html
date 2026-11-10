@@ -1,0 +1,7 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Brasa · Pago</title><link rel="stylesheet" href="style.css"><script src="app.js"></script><script src="https://vistazo-pi.vercel.app/bridge.js" defer></script></head>
+<body><header data-header></header><main><h1>Pago</h1><p class="muted">Pago simulado: no se cobra nada.</p>
+<form class="panel" id="f" data-testid="pay-form"><label for="n">Nombre en la tarjeta</label><input id="n" data-testid="card-name" value="">
+<label for="cc">Número de tarjeta</label><input id="cc" data-testid="card-number" placeholder="4242 4242 4242 4242" data-sensitive>
+<label for="addr">Dirección de envío</label><input id="addr" data-testid="address" placeholder="Calle Ficticia 1, Girona">
+<button class="btn pay" style="width:100%;margin-top:18px" data-testid="pay">Pagar pedido</button></form></main><p class="foot">Brasa Tostadores es una <b>empresa ficticia</b> · datos sintéticos para demo de Vistazo · <span data-version></span></p>
+<script>guard();f.onsubmit=e=>{e.preventDefault();store.cart={};location.href="ok.html"}</script></body></html>

@@ -1,0 +1,18 @@
+*{box-sizing:border-box}body{margin:0;font:16px/1.5 ui-sans-serif,system-ui,sans-serif;background:#f7f1ea;color:#2a211c}
+a{color:inherit}header[data-header]{display:flex;align-items:center;justify-content:space-between;padding:16px 24px;border-bottom:1px solid #e6dccf;background:#fffaf4;position:sticky;top:0}
+.logo{font-weight:800;font-size:22px;text-decoration:none;letter-spacing:-.02em}.logo span{color:#d4572a}
+nav{display:flex;gap:16px;align-items:center;font-size:14px}nav a{text-decoration:none}nav button{border:0;background:none;color:#8a7a6c;cursor:pointer}
+main{max-width:1040px;margin:0 auto;padding:32px 24px}h1{font-size:34px;letter-spacing:-.02em;margin:0 0 8px}.muted{color:#8a7a6c}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;margin-top:24px}
+.card{background:#fff;border:1px solid #eadfd2;border-radius:14px;overflow:hidden}.card .img{height:120px}.card .body{padding:14px}
+.card h3{margin:0;font-size:17px}.price{font-weight:700;margin-top:8px}
+.btn{display:inline-block;border:0;border-radius:10px;padding:10px 16px;font-weight:600;cursor:pointer;background:#2a211c;color:#fff;text-decoration:none;font-size:14px}
+.btn.light{background:#efe5d9;color:#2a211c}.btn.pay{background:#d4572a;color:#fff}
+label{display:block;font-size:13px;font-weight:600;margin:14px 0 4px}input,select{width:100%;padding:11px 12px;border:1px solid #d9cbbb;border-radius:10px;font:inherit;background:#fff}
+.panel{background:#fff;border:1px solid #eadfd2;border-radius:14px;padding:24px;max-width:420px}
+.row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f0e7dc}
+.login{min-height:100vh;display:grid;place-items:center;background:radial-gradient(circle at 20% 10%,#f3d9c3,transparent 50%),#f7f1ea}
+.foot{font-size:12px;color:#a09080;text-align:center;padding:24px}
+.err{color:#b42318;font-size:14px;margin-top:10px}
+@media (max-width:600px){h1{font-size:26px}main{padding:20px 16px}nav{gap:10px}}
+.promo{display:inline-block;margin-top:12px;background:#2a211c;color:#fff;border-radius:999px;padding:6px 14px;font-size:14px;font-weight:600}

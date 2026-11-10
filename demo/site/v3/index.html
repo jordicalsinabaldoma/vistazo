@@ -1,0 +1,9 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Brasa · Entrar</title><link rel="stylesheet" href="style.css"><script src="app.js"></script><script src="https://vistazo-pi.vercel.app/bridge.js" defer></script></head>
+<body class="login"><div><form class="panel" data-testid="login-form" id="f">
+<a class="logo">brasa<span>.</span></a><h1 style="margin-top:16px">Tu café, cada semana.</h1><p class="muted">Entra para hacer tu pedido.</p>
+<label for="email">Correo</label><input id="email" data-testid="email" type="email" placeholder="cliente@brasa.test">
+<label for="pw">Contraseña</label><input id="pw" data-testid="password" type="password">
+<p class="err" id="err" hidden>Correo o contraseña incorrectos</p>
+<button class="btn" style="width:100%;margin-top:18px" data-testid="login">Entrar</button>
+<p class="muted" style="font-size:13px;margin-top:22px">Usuario de prueba: cliente@brasa.test / demo1234</p></form><p class="foot">Brasa Tostadores es una <b>empresa ficticia</b> · datos sintéticos para demo de Vistazo · <span data-version></span></p></div>
+<script>document.getElementById("f").onsubmit=e=>{e.preventDefault();if(email.value===DEMO_USER.email&&pw.value===DEMO_USER.password){store.user=DEMO_USER.name;location.href="catalogo.html"}else err.hidden=false}</script></body></html>
