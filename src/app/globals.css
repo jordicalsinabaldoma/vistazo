@@ -1,26 +1,58 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-paper: #f5f4f0;
+  --color-card: #ffffff;
+  --color-ink: #17181c;
+  --color-muted: #6b6d75;
+  --color-line: #e3e1db;
+  --color-accent: #ff5b1f;
+  --color-accent-ink: #b8380a;
+  --color-ok: #127a4a;
+  --color-okbg: #e3f4ea;
+  --color-warn: #a35d00;
+  --color-warnbg: #fdf0d8;
+  --color-bad: #b42318;
+  --color-badbg: #fde8e6;
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+
+@layer components {
+.btn {
+  @apply inline-flex items-center justify-center gap-1.5 rounded-md border border-line bg-card px-3 py-1.5 text-sm font-medium text-ink transition hover:border-ink/40 disabled:opacity-50 disabled:pointer-events-none;
+}
+.btn-primary {
+  @apply border-ink bg-ink text-white hover:bg-ink/85;
+}
+.btn-accent {
+  @apply border-accent bg-accent text-white hover:bg-accent-ink hover:border-accent-ink;
+}
+.btn-ghost {
+  @apply border-transparent bg-transparent hover:bg-ink/5;
+}
+.input {
+  @apply w-full rounded-md border border-line bg-card px-3 py-2 text-sm outline-none focus:border-ink/50 focus:ring-2 focus:ring-ink/10;
+}
+.label {
+  @apply mb-1 block text-xs font-medium uppercase tracking-wide text-muted;
+}
+.card {
+  @apply rounded-xl border border-line bg-card;
+}
+.chip {
+  @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium;
+}
+.pin {
+  @apply absolute flex h-6 w-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-white bg-accent text-[11px] font-bold text-white shadow-md;
+}
+.pin-resolved {
+  @apply bg-ok;
+}
 }

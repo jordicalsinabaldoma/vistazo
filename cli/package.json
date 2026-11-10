@@ -1,0 +1,32 @@
+{
+  "name": "vistazo",
+  "version": "0.1.0",
+  "description": "CLI y servidor MCP de Vistazo: publica revisiones visuales desde tu agente y recoge el feedback.",
+  "type": "module",
+  "bin": {
+    "vistazo": "bin/vistazo.mjs"
+  },
+  "files": [
+    "bin",
+    "lib"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "@vercel/blob": "^2.9.0",
+    "zod": "^3.25.76"
+  },
+  "peerDependencies": {
+    "playwright": ">=1.45"
+  },
+  "peerDependenciesMeta": {
+    "playwright": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "playwright": "^1.65.0"
+  }
+}

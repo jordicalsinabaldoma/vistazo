@@ -1,9 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
-  cacheComponents: true,
-  partialPrefetching: true,
+  serverExternalPackages: ["firebase-admin"],
   turbopack: {
     rules: {
       "*.css": {
@@ -11,6 +9,18 @@ const nextConfig: NextConfig = {
         as: "*.css",
       },
     },
+  },
+  async headers() {
+    return [
+      {
+        // bridge.js lo cargan las apps revisadas desde otro origen
+        source: "/bridge.js",
+        headers: [
+          { key: "Access-Control-Allow-Origin", value: "*" },
+          { key: "Cache-Control", value: "public, max-age=300" },
+        ],
+      },
+    ];
   },
 };
 

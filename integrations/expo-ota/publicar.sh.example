@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# PLANTILLA (inactiva). Publica en Vistazo la OTA de una PR de una app Expo.
+# Requiere: VISTAZO_URL, VISTAZO_PROJECT, VISTAZO_API_KEY (secretos del CI, nunca en el repo)
+#           PREVIEW_URL (QR/deep link que genera tu paso de OTA), RUNTIME_VERSION, PR_NUMBER, PR_TITLE
+#           ./capturas con <recorrido>__<paso>.png generadas por tu runner nativo
+set -euo pipefail
+npx vistazo publish \
+  --config vistazo.config.json \
+  --assets ./capturas \
+  --title "PR #${PR_NUMBER}: ${PR_TITLE}" \
+  --summary-file ./.vistazo/contexto.md \
+  --qr "${PREVIEW_URL}" --qr-label "Abrir la preview OTA (requiere development build compatible)" \
+  --meta pr="${PR_NUMBER}" --meta runtimeVersion="${RUNTIME_VERSION}" --meta commit="${GITHUB_SHA:-local}"

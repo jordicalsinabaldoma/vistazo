@@ -1,0 +1,8 @@
+# PLANTILLA Maestro: cada takeScreenshot deja <recorrido>__<paso>.png para `vistazo publish --assets`.
+appId: com.ejemplo.app
+---
+- launchApp
+- takeScreenshot: capturas/login__Login
+- tapOn:
+    id: "login-button"
+- takeScreenshot: capturas/login__Home

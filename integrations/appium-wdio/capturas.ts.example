@@ -1,0 +1,12 @@
+// PLANTILLA: helper para specs de WebdriverIO/Appium que deja capturas con la convención de Vistazo.
+// Uso en un spec:  await vistazoShot('login', 'Login')
+import { mkdirSync } from 'node:fs';
+import path from 'node:path';
+
+const DIR = process.env.VISTAZO_ASSETS_DIR || './capturas';
+mkdirSync(DIR, { recursive: true });
+
+export async function vistazoShot(flowKey: string, stepKey: string) {
+  // Asegúrate de estar en un entorno de pruebas con datos semilla antes de capturar.
+  await browser.saveScreenshot(path.join(DIR, `${flowKey}__${stepKey}.png`));
+}

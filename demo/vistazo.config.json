@@ -1,0 +1,66 @@
+{
+  "$comment": "Recorridos de la app ficticia Brasa. Las descripciones en lenguaje natural las escribe la persona; las acciones las traduce el agente. Secretos solo por ${env:…}.",
+  "baseUrl": "https://brasa-demo-murex.vercel.app/v1/",
+  "allowHosts": ["brasa-demo-murex.vercel.app", "localhost", "127.0.0.1"],
+  "viewport": { "width": 1280, "height": 800 },
+  "mask": ["[data-sensitive]"],
+  "video": true,
+  "flows": [
+    {
+      "key": "compra",
+      "title": "Cliente crea un pedido y llega al pago",
+      "description": "Entra como cliente, crea un pedido y llega al pago",
+      "steps": [
+        { "key": "login", "title": "Entrar", "actions": [{ "goto": "index.html" }] },
+        {
+          "key": "catalogo",
+          "title": "Catálogo",
+          "actions": [
+            { "fill": ["[data-testid=email]", "cliente@brasa.test"] },
+            { "fill": ["[data-testid=password]", "${env:BRASA_DEMO_PASSWORD}"] },
+            { "click": "[data-testid=login]" },
+            { "waitFor": "[data-testid=product-p1]" }
+          ]
+        },
+        {
+          "key": "carrito",
+          "title": "Carrito con dos cafés",
+          "actions": [
+            { "click": "[data-testid=add-p1]" },
+            { "click": "[data-testid=add-p3]" },
+            { "click": "[data-testid=nav-cart]" },
+            { "waitFor": "[data-testid=total]" }
+          ]
+        },
+        {
+          "key": "pago",
+          "title": "Pago",
+          "notes": "El número de tarjeta se enmascara en la captura (mask).",
+          "actions": [
+            { "click": "[data-testid=checkout]" },
+            { "fill": ["[data-testid=card-name]", "Lucía Demo"] },
+            { "fill": ["[data-testid=card-number]", "4242 4242 4242 4242"] }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "login-error",
+      "title": "Contraseña incorrecta",
+      "description": "Intenta entrar con una contraseña mal y comprueba que el error se entiende",
+      "steps": [
+        {
+          "key": "error",
+          "title": "Mensaje de error",
+          "actions": [
+            { "goto": "index.html" },
+            { "fill": ["[data-testid=email]", "cliente@brasa.test"] },
+            { "fill": ["[data-testid=password]", "mal"] },
+            { "click": "[data-testid=login]" },
+            { "waitFor": "#err" }
+          ]
+        }
+      ]
+    }
+  ]
+}

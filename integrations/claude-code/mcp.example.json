@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "vistazo": {
+      "command": "node",
+      "args": ["/ruta/a/vistazo/cli/bin/vistazo.mjs", "mcp"],
+      "env": { "VISTAZO_URL": "https://vistazo-pi.vercel.app", "VISTAZO_PROJECT": "<id>", "VISTAZO_API_KEY": "<pon-la-en-tu-entorno>" }
+    }
+  }
+}

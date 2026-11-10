@@ -1,0 +1,23 @@
+{
+  "$comment": "Plantilla genérica para una app Expo/React Native sin target web. No hay baseUrl: las capturas llegan por --assets desde el runner nativo y la vía de prueba es un QR/deep link de la OTA de la PR. Las claves de recorrido/paso deberían coincidir con los nombres de ruta de la app para que el diff y el arrastre emparejen.",
+  "flows": [
+    {
+      "key": "login",
+      "title": "Entrar con usuario de prueba",
+      "description": "Abre la app en el entorno de pruebas y entra con el usuario de prueba",
+      "steps": [
+        { "key": "Login", "title": "Pantalla de login", "notes": "testID: login-screen" },
+        { "key": "Home", "title": "Inicio tras entrar" }
+      ]
+    },
+    {
+      "key": "flujo-critico-1",
+      "title": "Flujo crítico de ejemplo",
+      "description": "Describe aquí, en lenguaje natural, el recorrido que hay que probar en cada revisión",
+      "steps": [
+        { "key": "Paso1", "title": "Primer paso" },
+        { "key": "Paso2", "title": "Segundo paso" }
+      ]
+    }
+  ]
+}
