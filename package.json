@@ -1,7 +1,13 @@
 {
-  "name": "42-vistazo",
+  "name": "vistazo",
   "version": "0.1.0",
   "private": true,
+  "description": "La pull request visual de tu app: revisión visual para quien programa con agentes.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sergisaes/vistazo"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",

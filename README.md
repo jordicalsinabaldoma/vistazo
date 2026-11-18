@@ -1,13 +1,49 @@
-# Vistazo — la pull request visual
+# Vistazo
 
-Herramienta de revisión visual para apps, webs y experiencias digitales, pensada para quien programa con agentes.
-Publicas una versión con contexto y recorridos de prueba, la compartes con un enlace, el revisor la prueba y comenta
-sobre lo que ve, y alguien identificado la aprueba explícitamente. El feedback vuelve a tu agente como un
-comentario-resumen y un prompt que **tú** revisas y pegas.
+**La pull request visual de tu app.** Tu agente de código publica lo que ha cambiado (capturas, la web en vivo o un QR
+para abrirla en el móvil, y los datos para probarla). Quien revisa lo prueba, comenta encima de lo que ve y lo aprueba o
+pide cambios. El feedback vuelve a tu agente como un prompt donde los comentarios van aislados como datos, nunca como
+órdenes.
 
-- Producción (POC): https://vistazo-pi.vercel.app
-- App de demo independiente (empresa ficticia, datos sintéticos): https://brasa-demo-murex.vercel.app (`/v1/`, `/v2/`)
-- Licencia MIT. Las contribuciones son bienvenidas: abre una issue antes de un cambio grande.
+> *English: Vistazo is a visual pull request for apps built with coding agents. The agent publishes screenshots, a live
+> link or a QR for mobile, plus test data; reviewers comment on what they see and approve or request changes; the
+> feedback goes back to the agent as a prompt where reviewer comments are isolated as untrusted data. The UI is in
+> Spanish. MIT licensed.*
+
+![Resumen de una revisión](docs/img/resumen.png)
+
+- Demo: https://vistazo-pi.vercel.app (pide acceso de demo) · app de ejemplo ficticia: https://brasa-demo-murex.vercel.app
+- Licencia MIT · Seguridad: [SECURITY.md](SECURITY.md) · Contribuir: [CONTRIBUTING.md](CONTRIBUTING.md)
+
+## Qué hace
+
+| | |
+|---|---|
+| **Revisión como una PR** | Resumen (la conversación), Revisar (capturas, en vivo o en el móvil, cambios) y Versiones (como commits). |
+| **Comentarios anclados** | Sobre un punto de una captura, de la web en vivo o de un momento de un vídeo. Siguen abiertos en la versión siguiente. |
+| **Diff visual** | Zonas que cambian entre versiones, numeradas. Oculta las pantallas iguales. |
+| **Kit de prueba** | Usuarios, códigos, productos… con su QR de uno en uno. Tipos de dato propios por app. |
+| **Apps móviles** | QR de Expo/Metro o EAS Update, deep link o descarga; capturas de simulador, Maestro o Appium. |
+| **Invitados** | Enlace que abre una sola revisión, revocable y con caducidad. Los invitados comentan; aprobar es de cuentas. |
+| **Agente** | CLI y servidor MCP: publica versiones y lee el feedback. No comenta, no aprueba, no toca git. |
+| **Feedback seguro** | Comentarios como datos en un bloque con delimitador aleatorio; lo que parece una orden se aparta. |
+
+![Revisar con el kit de prueba](docs/img/revisar.png)
+
+![En el móvil: QR de Expo y kit](docs/img/movil.png)
+
+## Montarlo
+
+Stack: Next.js 16 en Vercel, Firestore (solo como base de datos) y Vercel Blob privado. Sin servicios de terceros más.
+
+1. Crea un proyecto de Firebase con Firestore y una service account con `roles/datastore.user`.
+2. Crea un almacén de Vercel Blob **privado**.
+3. Despliega en Vercel con las variables de [.env.example](.env.example): `SESSION_SECRET`,
+   `FIREBASE_SERVICE_ACCOUNT_B64` y `BLOB_READ_WRITE_TOKEN`.
+4. Entra, crea una app y, en Ajustes, una clave para tu agente. Copia `skills/vistazo/SKILL.md` a tu repo y añade un
+   `vistazo.json` (abajo).
+
+Para desarrollar en local sin base de datos real, mira [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Circuito
 
@@ -159,5 +195,22 @@ VISTAZO_URL=http://localhost:3100 PROJECT=<id> DEMO_PASSWORD=… node scripts/e2
 
 `scripts/walkthrough*.mjs` grabaron el vídeo de la interfaz anterior; no están adaptados a la nueva.
 
-Límites del POC y pendientes: `docs/PENDIENTE.md`. Compatibilidad futura con apps nativas con OTA por PR:
+## Estructura
+
+```
+src/app            páginas (/app, /p/:id, /r/:id, /s/:token) y API (route handlers)
+src/components     interfaz; review/ es todo lo de una revisión
+src/lib            modelo, permisos, estado del circuito, kit, feedback aislado
+cli/               CLI y servidor MCP (vistazo publish | feedback | reviews | mcp)
+skills/vistazo     skill para agentes de código
+integrations/      plantillas: Expo OTA, GitHub Actions, Maestro, Appium, Claude Code
+demo/              app de ejemplo ficticia (Brasa) y su config de capturas
+tests/, scripts/   tests unitarios, e2e contra la API, red team del prompt
+```
+
+Límites y pendientes: `docs/PENDIENTE.md`. Compatibilidad futura con apps nativas con OTA por PR:
 `docs/COMPATIBILIDAD-NATIVA.md` e `integrations/`.
+
+## Licencia
+
+[MIT](LICENSE).
