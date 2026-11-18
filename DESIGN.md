@@ -1,60 +1,56 @@
-# Vistazo: sistema visual
+# Vistazo: visual system
 
-Herramienta de trabajo (modo «operar»): sobria, legible, jerarquía clara. La marca vive
-en los detalles (el punto naranja del logo, el naranja de la acción principal).
-Tokens en `src/app/globals.css`; componentes base en `src/components/ui.tsx`.
+A work tool ("operate" mode): calm, readable, with a clear hierarchy. The brand lives in the details (the orange dot in
+the logo, the orange of the main action). Tokens in `src/app/globals.css`; base components in `src/components/ui.tsx`.
 
 ## Color
 
-Claro y oscuro, siguiendo al sistema. El color solo significa algo:
+Light and dark, following the system. Color only carries meaning:
 
-| Token | Uso | Contraste (claro / oscuro) |
+| Token | Use | Contrast (light / dark) |
 |---|---|---|
-| `accent` / `on-accent` | Acción principal (una por pantalla), pines, foco | 5,2 / 8,5 |
-| `warn` / `warnbg` | Te toca corregir: con comentarios, cambios pedidos, avisos | 6,4 / 10,1 |
-| `ok` / `okbg` | Aprobado, «funciona» | 6,5 / 10,2 |
-| `bad` / `badbg` | Falla, revocar, errores | 5,3 / 8,5 |
-| `muted` | Texto secundario | ≥ 5,4 en cualquier fondo |
-| `field` | Borde de campos y botones | 3,3 (≥ 3:1 para controles) |
-| `info` / `infobg` | Revisión abierta sin revisar (icono de la lista) | |
-| `accent-soft` | Selección suave (pantalla activa, filtro activo) | |
-| `ink`, `paper`, `card`, `sunken`, `line`, `neutral` | Neutros (grises fríos) | |
-| `--k-<color>` | Tipos de dato del kit: orange, green, violet, blue, ink, ochre, grey, red | |
+| `accent` / `on-accent` | Main action (one per screen), pins, focus | 5.2 / 8.5 |
+| `warn` / `warnbg` | Your turn to fix: with comments, changes requested, warnings | 6.4 / 10.1 |
+| `ok` / `okbg` | Approved, "works" | 6.5 / 10.2 |
+| `bad` / `badbg` | Fails, revoke, errors | 5.3 / 8.5 |
+| `muted` | Secondary text | ≥ 5.4 on any background |
+| `field` | Border of fields and buttons | 3.3 (≥ 3:1 for controls) |
+| `info` / `infobg` | Open review not yet reviewed (list icon) | |
+| `accent-soft` | Soft selection (active screen, active filter) | |
+| `ink`, `paper`, `card`, `sunken`, `line`, `neutral` | Neutrals (cool greys) | |
+| `--k-<color>` | Test kit data types: orange, green, violet, blue, ink, ochre, grey, red | |
 
-## Estados de una revisión
+## Review states
 
-Etiqueta `StateLabel`, siempre igual: Pendiente (neutro), Con comentarios / Cambios
-pedidos (ámbar), Aprobada (verde), Cerrada (gris).
+The `StateLabel` badge, always the same: Pending review (neutral), With comments / Changes requested (amber), Approved
+(green), Closed (grey).
 
-## Estructura (inspirada en GitHub, sin copiarlo)
+## Structure (inspired by GitHub, not a copy)
 
-- Cabecera de página en banda blanca con título, estado, meta y **pestañas subrayadas** (`.tabs`, con `.count`).
-- Cajas con cabecera (`.box`, `.box-head`) para descripción y pruebas; línea de tiempo con iconos en círculo.
-- Barra lateral de secciones pequeñas (`.side-title`) separadas por una línea.
-- Avatares con iniciales y color estable por nombre; el agente es «IA» en tinta; el invitado lleva borde discontinuo.
-- En móvil, todo en una columna; el siguiente paso sube arriba.
+- Page header in a white band with title, state, meta and **underlined tabs** (`.tabs`, with `.count`).
+- Boxes with a header (`.box`, `.box-head`) for the description and checks; a timeline with icons in circles.
+- A sidebar of small sections (`.side-title`) separated by a line.
+- Avatars with initials and a stable color per name; the agent is "AI" in ink; guests get a dashed border.
+- On mobile, everything goes in one column; the next step moves to the top.
 
-## Botones
+## Buttons
 
-- `btn-primary` (naranja): la acción principal. Una por pantalla.
-- `btn-strong` (tinta): acciones fuertes dentro de una herramienta (comentar).
-- `btn`: secundaria. `btn-quiet`: terciaria. `btn-danger`: quitar, revocar.
-- Altura mínima 36px (32px en `btn-sm`); pines con área táctil de 40px.
+- `btn-primary` (orange): the main action. One per screen.
+- `btn-strong` (ink): strong actions inside a tool (comment).
+- `btn`: secondary. `btn-quiet`: tertiary. `btn-danger`: remove, revoke.
+- Minimum height 36px (32px for `btn-sm`); pins with a 40px touch area.
 
-## Tipografía y espacio
+## Type and spacing
 
-Geist y Geist Mono (solo para código, ramas y datos de prueba). Escala: 12 / 13 / 14 /
-15 / 16 / 20 / 28. Dos pesos: normal y semibold. Espaciado en múltiplos de 4.
+Geist and Geist Mono (only for code, branches and test data). Scale: 12 / 13 / 14 / 15 / 16 / 20 / 28. Two weights:
+regular and semibold. Spacing in multiples of 4.
 
-## Forma
+## Shape
 
-Controles 8px, superficies 12px, etiquetas y pines redondos. Sombras solo en capas que
-flotan (diálogos, menús, pines).
+Controls 8px, surfaces 12px, badges and pins fully round. Shadows only on floating layers (dialogs, menus, pins).
 
-## Reglas
+## Rules
 
-- Sin rayas largas en textos de interfaz, sin emojis como iconos (Phosphor), sin
-  etiquetas en mayúsculas sobre los títulos.
-- Diálogos con `<dialog>` nativo (`Sheet`): Esc, foco atrapado, fondo inerte.
-- Movimiento solo para dar feedback (entrada de diálogos), respetando
-  `prefers-reduced-motion`.
+- No long dashes in UI text, no emoji as icons (Phosphor), no uppercase labels above titles.
+- Dialogs use the native `<dialog>` (`Sheet`): Esc, trapped focus, inert background.
+- Motion only as feedback (dialog entrance), respecting `prefers-reduced-motion`.

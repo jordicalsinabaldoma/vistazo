@@ -1,0 +1,8 @@
+# Maestro TEMPLATE: each takeScreenshot leaves <flow>__<step>.png for `vistazo publish --shots`.
+appId: com.example.app
+---
+- launchApp
+- takeScreenshot: screenshots/login__Login
+- tapOn:
+    id: "login-button"
+- takeScreenshot: screenshots/login__Home

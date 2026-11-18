@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# TEMPLATE (inactive). Publishes a PR's OTA update of an Expo app to Vistazo.
+# Needs: VISTAZO_URL, VISTAZO_PROJECT, VISTAZO_API_KEY (CI secrets, never in the repo)
+#        PREVIEW_URL (QR/deep link produced by your OTA step), RUNTIME_VERSION, PR_NUMBER, PR_TITLE
+#        ./screenshots with <flow>__<step>.png produced by your native runner
+#        optional: ./.vistazo/kit.json (or the HTML of a QR label page) with the test data
+set -euo pipefail
+npx vistazo publish \
+  --config vistazo.config.json \
+  --shots ./screenshots \
+  --title "PR #${PR_NUMBER}: ${PR_TITLE}" \
+  --summary-file ./.vistazo/context.md \
+  --qr "${PREVIEW_URL}" --qr-label "Open the OTA preview (needs a compatible development build)" \
+  --meta pr="${PR_NUMBER}" --meta runtimeVersion="${RUNTIME_VERSION}" --meta commit="${GITHUB_SHA:-local}"

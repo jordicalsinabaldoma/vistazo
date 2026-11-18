@@ -12,13 +12,13 @@ const schema = z.object({
   note: z.string().max(500).optional(),
 });
 
-// Qué probar (flujos críticos de la app + los de esta revisión): cualquiera que pruebe, también invitados, marca.
+// What to test (the app's critical flows + this review's items): anyone testing, guests too, can mark them.
 export const POST = handle(async (req: Request, { params }: Ctx) => {
   const { id } = await params;
   const { a, review } = await revAccess(req, id);
   need(a, "comment");
   const b = schema.parse(await req.json());
-  if (![...a.project.checklist, ...(review.testPlan ?? [])].some((c) => c.id === b.itemId)) throw bad("Ese punto no está en lo que hay que probar");
+  if (![...a.project.checklist, ...(review.testPlan ?? [])].some((c) => c.id === b.itemId)) throw bad("That item is not in what to test");
   await col.revisions().doc(id).update({
     [`checks.${b.itemId}`]: { status: b.status, by: a.author.name.slice(0, 80), at: Date.now(), note: b.note },
   });

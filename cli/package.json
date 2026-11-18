@@ -1,7 +1,7 @@
 {
   "name": "vistazo",
   "version": "0.1.0",
-  "description": "CLI y servidor MCP de Vistazo: publica revisiones visuales desde tu agente y recoge el feedback.",
+  "description": "Vistazo CLI and MCP server: publish visual reviews from your agent and collect the feedback.",
   "type": "module",
   "bin": {
     "vistazo": "bin/vistazo.mjs"

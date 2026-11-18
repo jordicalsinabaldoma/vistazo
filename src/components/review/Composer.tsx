@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 
-/** Caja flotante para escribir un comentario en el punto marcado. */
+/** Floating box to write a comment on the marked spot. */
 export default function Composer({
   x,
   y,
@@ -47,8 +47,8 @@ export default function Composer({
           rows={3}
           value={body}
           onChange={(e) => setBody(e.target.value)}
-          placeholder="¿Qué ves aquí?"
-          aria-label="Comentario"
+          placeholder="What do you see here?"
+          aria-label="Comment"
           onKeyDown={(e) => {
             if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) (e.currentTarget.form as HTMLFormElement).requestSubmit();
             if (e.key === "Escape") onCancel();
@@ -56,10 +56,10 @@ export default function Composer({
         />
         <div className="mt-2 flex justify-end gap-2">
           <button type="button" className="btn btn-quiet" onClick={onCancel}>
-            Cancelar
+            Cancel
           </button>
           <button className="btn btn-strong" disabled={busy || !body.trim()}>
-            Comentar
+            Comment
           </button>
         </div>
       </form>

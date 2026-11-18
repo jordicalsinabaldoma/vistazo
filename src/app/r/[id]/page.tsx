@@ -16,22 +16,25 @@ import { latestVerdicts, nextStep, stageLabel, stageOf, type Action } from "@/li
 import type { Anchor, Comment } from "@/lib/model";
 
 type Dialog = "feedback" | "share" | "edit" | "finish" | null;
-type Tab = { tab: "resumen" | "revisar" | "versiones"; view: View; panel: Panel | null; flow: string | null };
+type Tab = { tab: "overview" | "review" | "versions"; view: View; panel: Panel | null; flow: string | null };
 
 function readTab(): Tab {
-  const base: Tab = { tab: "resumen", view: "capturas", panel: null, flow: null };
+  const base: Tab = { tab: "overview", view: "screens", panel: null, flow: null };
   if (typeof location === "undefined") return base;
   const q = new URLSearchParams(location.search);
-  const v = q.get("revisar");
+  // Old Spanish links (?revisar=capturas|vivo|cambios, ?versiones, flujo) still work.
+  const legacy: Record<string, View> = { capturas: "screens", vivo: "live", cambios: "changes" };
+  const raw = q.get("review") ?? q.get("revisar");
+  const v = raw === null ? null : (legacy[raw] ?? raw);
   const panel = q.get("panel");
   if (v !== null)
     return {
-      tab: "revisar",
-      view: v === "vivo" || v === "cambios" ? v : "capturas",
+      tab: "review",
+      view: v === "live" || v === "changes" ? v : "screens",
       panel: panel === "kit" || panel === "test" || panel === "comments" ? panel : null,
-      flow: q.get("flujo"),
+      flow: q.get("flow") ?? q.get("flujo"),
     };
-  if (q.has("versiones")) return { ...base, tab: "versiones" };
+  if (q.has("versions") || q.has("versiones")) return { ...base, tab: "versions" };
   return base;
 }
 
@@ -50,12 +53,12 @@ export default function ReviewPage() {
       api<ReviewData>(`/api/revisions/${id}`)
         .then(setData)
         .catch((e: Error & { status?: number }) =>
-          setErr(e.status === 401 ? "Necesitas iniciar sesión o abrir el enlace de invitado que te han pasado." : e.message),
+          setErr(e.status === 401 ? "Sign in, or open the guest link you were sent." : e.message),
         ),
     [id],
   );
 
-  // Pestaña y vista en la URL, para poder compartir y volver atrás.
+  // Tab and view live in the URL, so they can be shared and the back button works.
   useEffect(() => {
     load();
     const sync = () => setTab(readTab());
@@ -65,14 +68,14 @@ export default function ReviewPage() {
 
   const navigate = useCallback((t: Tab) => {
     const u = new URL(location.href);
-    for (const k of ["revisar", "versiones", "panel", "flujo"]) u.searchParams.delete(k);
-    if (t.tab === "revisar") {
-      u.searchParams.set("revisar", t.view);
+    for (const k of ["review", "versions", "panel", "flow", "revisar", "versiones", "flujo"]) u.searchParams.delete(k);
+    if (t.tab === "review") {
+      u.searchParams.set("review", t.view);
       if (t.panel) u.searchParams.set("panel", t.panel);
-      if (t.flow) u.searchParams.set("flujo", t.flow);
+      if (t.flow) u.searchParams.set("flow", t.flow);
     }
-    if (t.tab === "versiones") u.searchParams.set("versiones", "");
-    history.pushState(null, "", u.toString().replace("versiones=", "versiones"));
+    if (t.tab === "versions") u.searchParams.set("versions", "");
+    history.pushState(null, "", u.toString().replace("versions=", "versions"));
     setTab(t);
     window.scrollTo({ top: 0 });
   }, []);
@@ -106,7 +109,7 @@ export default function ReviewPage() {
     return (
       <>
         <TopBar />
-        <div className="mx-auto grid max-w-[1280px] gap-4 px-4 py-8" aria-busy="true" aria-label="Cargando revisión">
+        <div className="mx-auto grid max-w-[1280px] gap-4 px-4 py-8" aria-busy="true" aria-label="Loading review">
           <div className="h-10 w-2/3 animate-pulse rounded-lg bg-sunken" />
           <div className="h-6 w-1/3 animate-pulse rounded-lg bg-sunken" />
           <div className="mt-6 h-64 animate-pulse rounded-xl bg-sunken" />
@@ -130,12 +133,12 @@ export default function ReviewPage() {
   });
   const canFinish = me.can.comment && !me.isAuthor;
   const team = me.can.publish;
-  const go: Go = (t, o) => navigate({ tab: t, view: o?.view ?? "capturas", panel: o?.panel ?? null, flow: o?.flow ?? null });
+  const go: Go = (t, o) => navigate({ tab: t, view: o?.view ?? "screens", panel: o?.panel ?? null, flow: o?.flow ?? null });
 
   const act = async (a: Action) => {
     setMsg("");
-    if (a === "review") go("revisar", { view: r.flows.length ? "capturas" : "vivo" });
-    else if (a === "diff") go("revisar", { view: data.previous ? "cambios" : "capturas" });
+    if (a === "review") go("review", { view: r.flows.length ? "screens" : "live" });
+    else if (a === "diff") go("review", { view: data.previous ? "changes" : "screens" });
     else if (a === "feedback") setDialog("feedback");
     else if (a === "share") setDialog("share");
     else if (a === "close")
@@ -145,13 +148,13 @@ export default function ReviewPage() {
       } catch (e) {
         setMsg((e as Error).message);
       }
-    else if (a === "publish") router.push(`/p/${p.id}/nueva?revision=${rv.id}`);
+    else if (a === "publish") router.push(`/p/${p.id}/new?revision=${rv.id}`);
   };
 
-  // En Revisar, lo principal para quien revisa es terminar; en el resto, el siguiente paso.
+  // On the Review tab, the main action for a reviewer is to finish; elsewhere, the next step.
   const primary =
-    tab.tab === "revisar" && canFinish
-      ? { label: "Terminar revisión", on: () => setDialog("finish"), testid: "finish" }
+    tab.tab === "review" && canFinish
+      ? { label: "Finish review", on: () => setDialog("finish"), testid: "finish" }
       : step.primary
         ? { label: step.primary.label, on: () => act(step.primary!.action), testid: "primary-action" }
         : null;
@@ -166,12 +169,12 @@ export default function ReviewPage() {
       </TopBar>
 
       <header className="border-b border-line bg-card">
-        <div className={`mx-auto w-full px-4 pt-6 ${tab.tab === "revisar" ? "max-w-[1600px]" : "max-w-[1280px]"}`}>
+        <div className={`mx-auto w-full px-4 pt-6 ${tab.tab === "review" ? "max-w-[1600px]" : "max-w-[1280px]"}`}>
           {!isLatest && (
             <p className="mb-4 flex flex-wrap items-center gap-2 rounded-lg bg-warnbg px-3 py-2 text-sm text-warn">
-              Estás viendo la v{r.number}. La última es la v{latest.number}.
+              You’re looking at v{r.number}. The latest is v{latest.number}.
               <Link href={`/r/${latest.id}`} className="font-medium underline">
-                Ir a la v{latest.number}
+                Go to v{latest.number}
               </Link>
             </p>
           )}
@@ -184,7 +187,7 @@ export default function ReviewPage() {
                 <StateLabel stage={stage} label={label} size="lg" />
                 <span className="inline-flex items-center gap-1.5">
                   <Avatar name={rv.author.name} size={18} />
-                  <b className="font-medium text-ink">{rv.author.name}</b> pide revisar la{" "}
+                  <b className="font-medium text-ink">{rv.author.name}</b> asks you to review{" "}
                   <span className="font-medium text-ink tabular">v{latest.number}</span>
                 </span>
                 {rv.branch && (
@@ -202,25 +205,25 @@ export default function ReviewPage() {
                   {primary.label}
                 </button>
               )}
-              {tab.tab !== "revisar" && canFinish && step.primary?.action !== "review" && step.primary?.action !== "diff" && (
+              {tab.tab !== "review" && canFinish && step.primary?.action !== "review" && step.primary?.action !== "diff" && (
                 <button className="btn min-h-10" onClick={() => setDialog("finish")} data-testid={primary ? undefined : "finish"}>
-                  Terminar revisión
+                  Finish review
                 </button>
               )}
               {team && step.primary?.action !== "feedback" && (
                 <button className="btn min-h-10" onClick={() => setDialog("feedback")}>
-                  <Robot size={16} aria-hidden /> Feedback para tu agente
+                  <Robot size={16} aria-hidden /> Feedback for your agent
                 </button>
               )}
               <MoreMenu
                 items={[
-                  team && step.primary?.action !== "share" && { label: "Compartir con invitados", icon: <ShareNetwork size={16} aria-hidden />, on: () => setDialog("share") },
-                  team && { label: "Publicar nueva versión", icon: <Plus size={16} aria-hidden />, on: () => act("publish") },
-                  team && { label: "Editar revisión y kit de prueba", icon: <PencilSimple size={16} aria-hidden />, on: () => setDialog("edit") },
-                  team && rv.status === "open" && step.primary?.action !== "close" && { label: "Cerrar revisión", icon: <LockSimple size={16} aria-hidden />, on: () => act("close") },
+                  team && step.primary?.action !== "share" && { label: "Share with guests", icon: <ShareNetwork size={16} aria-hidden />, on: () => setDialog("share") },
+                  team && { label: "Publish new version", icon: <Plus size={16} aria-hidden />, on: () => act("publish") },
+                  team && { label: "Edit review and test kit", icon: <PencilSimple size={16} aria-hidden />, on: () => setDialog("edit") },
+                  team && rv.status === "open" && step.primary?.action !== "close" && { label: "Close review", icon: <LockSimple size={16} aria-hidden />, on: () => act("close") },
                   team &&
                     rv.status === "closed" && {
-                      label: "Reabrir revisión",
+                      label: "Reopen review",
                       icon: <LockSimpleOpen size={16} aria-hidden />,
                       on: async () => (await api(`/api/reviews/${rv.id}`, { method: "PATCH", json: { status: "open" } }), load()),
                     },
@@ -233,25 +236,25 @@ export default function ReviewPage() {
               <ErrorNote>{msg}</ErrorNote>
             </div>
           )}
-          <nav className="tabs mt-5" role="tablist" aria-label="Secciones de la revisión">
-            <button role="tab" aria-selected={tab.tab === "resumen"} onClick={() => navigate({ ...tab, tab: "resumen" })}>
-              <ChatsCircle size={17} aria-hidden /> Resumen {openCount > 0 && <span className="count">{openCount}</span>}
+          <nav className="tabs mt-5" role="tablist" aria-label="Review sections">
+            <button role="tab" aria-selected={tab.tab === "overview"} onClick={() => navigate({ ...tab, tab: "overview" })}>
+              <ChatsCircle size={17} aria-hidden /> Overview {openCount > 0 && <span className="count">{openCount}</span>}
             </button>
-            <button role="tab" aria-selected={tab.tab === "revisar"} onClick={() => go("revisar", { view: r.flows.length ? "capturas" : "vivo" })} data-testid="tab-revisar">
-              <MagnifyingGlass size={17} aria-hidden /> Revisar {screens > 0 && <span className="count">{screens}</span>}
+            <button role="tab" aria-selected={tab.tab === "review"} onClick={() => go("review", { view: r.flows.length ? "screens" : "live" })} data-testid="tab-revisar">
+              <MagnifyingGlass size={17} aria-hidden /> Review {screens > 0 && <span className="count">{screens}</span>}
             </button>
-            <button role="tab" aria-selected={tab.tab === "versiones"} onClick={() => navigate({ ...tab, tab: "versiones" })}>
-              <Stack size={17} aria-hidden /> Versiones <span className="count">{data.versions.length}</span>
+            <button role="tab" aria-selected={tab.tab === "versions"} onClick={() => navigate({ ...tab, tab: "versions" })}>
+              <Stack size={17} aria-hidden /> Versions <span className="count">{data.versions.length}</span>
             </button>
           </nav>
         </div>
       </header>
 
-      {tab.tab === "revisar" ? (
+      {tab.tab === "review" ? (
         <Workspace ctx={ctx} view={tab.view} setView={(v) => navigate({ ...tab, view: v })} panel={tab.panel} flow={tab.flow} key={`${tab.panel}-${tab.flow}`} />
       ) : (
         <main className="mx-auto w-full max-w-[1280px] px-4 pb-16 pt-6">
-          {tab.tab === "resumen" ? (
+          {tab.tab === "overview" ? (
             <Overview
               ctx={ctx}
               go={go}
@@ -277,7 +280,7 @@ export default function ReviewPage() {
         onDone={async () => {
           setDialog(null);
           await load();
-          navigate({ ...tab, tab: "resumen" });
+          navigate({ ...tab, tab: "overview" });
         }}
       />
     </>

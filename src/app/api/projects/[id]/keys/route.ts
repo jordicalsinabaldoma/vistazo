@@ -21,7 +21,7 @@ export const GET = handle(async (req: Request, { params }: Ctx) => {
 
 const schema = z.object({ label: z.string().min(1).max(80) });
 
-// Clave de agente limitada a UN proyecto: publicar revisiones y leer feedback.
+// Agent key limited to ONE project: publish reviews and read feedback.
 export const POST = handle(async (req: Request, { params }: Ctx) => {
   const { id } = await params;
   const a = await access(req, id);

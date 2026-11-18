@@ -15,16 +15,16 @@ const where = (c: Comment, ctx: Ctx) => {
     try {
       p = new URL(a.url).pathname;
     } catch {}
-    return `En vivo, ${p}`;
+    return `Live, ${p}`;
   }
   if (a.type === "general") return "General";
-  return `${flow?.title ?? a.flowKey} > ${step?.title ?? a.stepKey}${a.type === "asset" && a.t != null ? `, segundo ${a.t.toFixed(1)}` : ""}`;
+  return `${flow?.title ?? a.flowKey} > ${step?.title ?? a.stepKey}${a.type === "asset" && a.t != null ? `, second ${a.t.toFixed(1)}` : ""}`;
 };
 
 const ROLE = (k: string) =>
-  k === "guest" ? <span className="chip bg-neutral text-muted">invitado</span> : k === "agent" ? <span className="chip bg-neutral text-muted">agente</span> : null;
+  k === "guest" ? <span className="chip bg-neutral text-muted">guest</span> : k === "agent" ? <span className="chip bg-neutral text-muted">agent</span> : null;
 
-const EVENT: Record<string, string> = { created: "creado", reply: "respuesta", resolved: "resuelto", reopened: "reabierto", carried: "sigue abierto en" };
+const EVENT: Record<string, string> = { created: "created", reply: "reply", resolved: "resolved", reopened: "reopened", carried: "still open in" };
 
 export default function CommentList({ ctx }: { ctx: Ctx }) {
   const [filter, setFilter] = useState<"open" | "resolved" | "all">("open");
@@ -33,12 +33,12 @@ export default function CommentList({ ctx }: { ctx: Ctx }) {
   const list = all.filter((c) => filter === "all" || c.status === filter);
   return (
     <div>
-      <div className="segmented" role="tablist" aria-label="Filtrar comentarios">
+      <div className="segmented" role="tablist" aria-label="Filter comments">
         {(
           [
-            ["open", `Abiertos ${open}`],
-            ["resolved", `Resueltos ${all.length - open}`],
-            ["all", "Todos"],
+            ["open", `Open ${open}`],
+            ["resolved", `Resolved ${all.length - open}`],
+            ["all", "All"],
           ] as const
         ).map(([k, l]) => (
           <button key={k} role="tab" aria-selected={filter === k} onClick={() => setFilter(k)} className="tabular">
@@ -52,8 +52,8 @@ export default function CommentList({ ctx }: { ctx: Ctx }) {
         ))}
         {!list.length && (
           <li className="rounded-xl border border-dashed border-line px-4 py-6 text-center text-sm text-muted">
-            {filter === "open" ? "No hay comentarios abiertos." : "Nada por aquí."}
-            {ctx.data.me.can.comment && filter === "open" && <span className="block">Toca una captura o la web en vivo para comentar en un punto concreto.</span>}
+            {filter === "open" ? "No open comments." : "Nothing here."}
+            {ctx.data.me.can.comment && filter === "open" && <span className="block">Tap a screenshot or the live app to comment on a specific spot.</span>}
           </li>
         )}
       </ul>
@@ -69,7 +69,7 @@ function General({ ctx }: { ctx: Ctx }) {
   if (!open)
     return (
       <button className="btn btn-sm mt-4" onClick={() => setOpen(true)}>
-        Comentario general
+        General comment
       </button>
     );
   return (
@@ -87,15 +87,15 @@ function General({ ctx }: { ctx: Ctx }) {
       }}
     >
       <label htmlFor="general-comment" className="text-sm font-medium">
-        Comentario general
+        General comment
       </label>
-      <textarea id="general-comment" autoFocus className="input" rows={2} value={body} onChange={(e) => setBody(e.target.value)} placeholder="Algo que no está en un punto concreto" />
+      <textarea id="general-comment" autoFocus className="input" rows={2} value={body} onChange={(e) => setBody(e.target.value)} placeholder="Something that is not on a specific spot" />
       <div className="flex gap-2">
         <button className="btn btn-strong btn-sm" disabled={!body.trim() || busy}>
-          Comentar
+          Comment
         </button>
         <button type="button" className="btn btn-quiet btn-sm" onClick={() => setOpen(false)}>
-          Cancelar
+          Cancel
         </button>
       </div>
     </form>
@@ -125,7 +125,7 @@ export function Item({ c, ctx, bare }: { c: Comment; ctx: Ctx; bare?: boolean })
     }
   };
   const carried = c.originRevisionId !== rev.id;
-  // Al equipo autor se le avisa de lo que no irá al prompt de su agente por defecto.
+  // The authoring team is warned about what will not go into their agent prompt by default.
   const flags = ctx.data.me.can.publish && c.status === "open" ? [...new Set([c.body, c.author.name, ...c.replies.map((r) => r.body)].flatMap(suspicious))] : [];
 
   return (
@@ -144,15 +144,15 @@ export function Item({ c, ctx, bare }: { c: Comment; ctx: Ctx; bare?: boolean })
           <span className="mt-1 block whitespace-pre-wrap break-words">{c.body}</span>
           <span className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs text-muted">
             {c.author.name} {ROLE(c.author.kind)} <span>{fmtDate(c.createdAt)}</span>
-            {carried && <span className="chip bg-warnbg text-warn">sigue abierto desde la v{c.originRevisionNumber}</span>}
-            {c.status === "resolved" && <span className="chip bg-okbg text-ok">resuelto por {c.resolvedBy?.name}</span>}
+            {carried && <span className="chip bg-warnbg text-warn">still open since v{c.originRevisionNumber}</span>}
+            {c.status === "resolved" && <span className="chip bg-okbg text-ok">resolved by {c.resolvedBy?.name}</span>}
           </span>
         </span>
       </button>
       {flags.length > 0 && (
         <p className="mt-2 flex items-start gap-1.5 rounded-lg bg-warnbg px-2.5 py-1.5 text-xs text-warn">
           <Warning size={14} className="mt-px shrink-0" aria-hidden />
-          Parece una instrucción para un agente ({flags.join(", ")}). No irá al prompt salvo que tú lo incluyas.
+          Looks like an instruction for an agent ({flags.join(", ")}). It will not go into the prompt unless you include it.
         </p>
       )}
       {c.replies.length > 0 && (
@@ -171,28 +171,28 @@ export function Item({ c, ctx, bare }: { c: Comment; ctx: Ctx; bare?: boolean })
         <div className="ml-8 mt-3 grid gap-2">
           {ctx.data.me.can.comment && (
             <div className="flex gap-2">
-              <input className="input" value={reply} onChange={(e) => setReply(e.target.value)} placeholder="Responder" aria-label="Respuesta" />
+              <input className="input" value={reply} onChange={(e) => setReply(e.target.value)} placeholder="Reply" aria-label="Reply" />
               <button className="btn btn-sm" disabled={!reply.trim()} onClick={() => act({ action: "reply", body: reply })}>
-                Responder
+                Reply
               </button>
             </div>
           )}
           <div className="flex flex-wrap gap-2">
             {c.status === "open" && ctx.data.me.can.resolve && (
               <button className="btn btn-sm" onClick={() => act({ action: "resolve", body: reply.trim() || undefined })}>
-                Resolver{reply.trim() ? " y responder" : ""}
+                Resolve{reply.trim() ? " and reply" : ""}
               </button>
             )}
             {c.status === "resolved" && ctx.data.me.can.comment && (
               <button className="btn btn-quiet btn-sm" onClick={() => act({ action: "reopen" })}>
-                Reabrir
+                Reopen
               </button>
             )}
           </div>
           {err && <p className="text-xs text-bad">{err}</p>}
           {c.events.length > 1 && (
             <details className="text-xs text-muted">
-              <summary className="cursor-pointer">Historial</summary>
+              <summary className="cursor-pointer">History</summary>
               <ul className="mt-1 grid gap-0.5">
                 {c.events.map((e, i) => (
                   <li key={i}>

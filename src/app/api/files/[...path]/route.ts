@@ -4,9 +4,9 @@ import { handle, notFound } from "@/lib/http";
 
 type Ctx = { params: Promise<{ path: string[] }> };
 
-// Los adjuntos son blobs PRIVADOS. Se sirven siempre por aquí, comprobando el
-// acceso al proyecto en cada petición: revocar un enlace de invitado corta
-// también el acceso a capturas y vídeos.
+// Attachments are PRIVATE blobs. They are always served through here, checking
+// project access on every request: revoking a guest link also cuts access to
+// screenshots and videos.
 export const GET = handle(async (req: Request, { params }: Ctx) => {
   const { path } = await params;
   const pathname = path.map(decodeURIComponent).join("/");
@@ -20,7 +20,7 @@ export const GET = handle(async (req: Request, { params }: Ctx) => {
   if (res.blob.size != null) h.set("Content-Length", String(res.blob.size));
   h.set("Cache-Control", "private, max-age=600");
   h.set("X-Content-Type-Options", "nosniff");
-  // Artifacts HTML se descargan, no se renderizan en nuestro origen.
+  // HTML artifacts are downloaded, never rendered on our origin.
   if (/html|javascript|svg/.test(res.blob.contentType ?? "")) h.set("Content-Disposition", "attachment");
   return new Response(res.stream, { headers: h });
 });

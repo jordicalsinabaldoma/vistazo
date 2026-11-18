@@ -5,7 +5,7 @@ import { handle, ok, unauthorized } from "@/lib/http";
 import type { Project, Review, ShareLink } from "@/lib/model";
 import { ensureMigrated, isShared, summarizeReviews } from "@/lib/revisions";
 
-// «Te toca»: las revisiones abiertas de todas tus apps en las que el siguiente paso es tuyo.
+// "Your turn": open reviews across all your apps where the next step is yours.
 export const GET = handle(async () => {
   const user = await currentUser();
   if (!user) throw unauthorized();

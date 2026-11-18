@@ -1,0 +1,12 @@
+// TEMPLATE: helper for WebdriverIO/Appium specs that saves screenshots with Vistazo's naming.
+// Use in a spec:  await vistazoShot('login', 'Login')
+import { mkdirSync } from 'node:fs';
+import path from 'node:path';
+
+const DIR = process.env.VISTAZO_ASSETS_DIR || './screenshots';
+mkdirSync(DIR, { recursive: true });
+
+export async function vistazoShot(flowKey: string, stepKey: string) {
+  // Make sure you are on a test environment with seed data before taking screenshots.
+  await browser.saveScreenshot(path.join(DIR, `${flowKey}__${stepKey}.png`));
+}

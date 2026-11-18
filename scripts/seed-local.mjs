@@ -1,13 +1,13 @@
-// Copia la demo de producción al emulador local de Firestore, SOLO leyendo de producción
-// por la API pública con la cuenta demo. Los datos quedan en el formato anterior a las
-// revisiones, así la primera carga en local prueba también la migración automática.
-// Arranca el emulador vacío antes de ejecutarlo.
+// Copies the production demo into the local Firestore emulator, ONLY reading from
+// production through the public API with the demo account. Data is written in the
+// pre-review format, so the first local load also exercises the automatic migration.
+// Start an empty emulator before running it.
 //   FIRESTORE_EMULATOR_HOST=127.0.0.1:8085 SOURCE=https://vistazo-pi.vercel.app DEMO_PASSWORD=… node scripts/seed-local.mjs
 import { randomBytes, scryptSync } from "node:crypto";
 import { initializeApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 
-if (!process.env.FIRESTORE_EMULATOR_HOST) throw new Error("Solo contra el emulador: falta FIRESTORE_EMULATOR_HOST");
+if (!process.env.FIRESTORE_EMULATOR_HOST) throw new Error("Emulator only: FIRESTORE_EMULATOR_HOST is missing");
 const SRC = process.env.SOURCE.replace(/\/$/, "");
 const PW = process.env.DEMO_PASSWORD;
 const db = getFirestore(initializeApp({ projectId: process.env.FIREBASE_PROJECT_ID || "vistazo-local" }));
@@ -59,5 +59,5 @@ for (const pr of projects) {
         await db.collection("comments").doc(c.id).set(c);
       }
   }
-  console.log(`✓ ${d.project.name}: ${d.revisions.length} versiones, ${seen.size} comentarios, ${d.members.length} personas`);
+  console.log(`✓ ${d.project.name}: ${d.revisions.length} versions, ${seen.size} comments, ${d.members.length} people`);
 }

@@ -14,7 +14,7 @@ const schema = z.object({
 export const POST = handle(async (req: Request) => {
   const b = schema.parse(await req.json());
   const dup = await col.users().where("email", "==", b.email).limit(1).get();
-  if (!dup.empty) throw bad("Ya existe una cuenta con ese correo");
+  if (!dup.empty) throw bad("An account with that email already exists");
   const user: User = {
     id: nanoid(12),
     email: b.email,

@@ -33,17 +33,17 @@ export default function Home() {
       <section>
         <Logo />
         <h1 className="mt-10 text-4xl font-semibold leading-[1.05] tracking-tight text-balance md:text-6xl">
-          La pull request visual de tu app.
+          The visual pull request for your app.
         </h1>
         <p className="mt-6 max-w-xl text-lg text-muted">
-          Enseña cada cambio, deja que lo prueben y comenten sobre lo que ven, y llévate el feedback a tu agente.
+          Show every change, let people test it and comment on what they see, and take the feedback back to your agent.
         </p>
         <ol className="mt-10 grid max-w-xl gap-3 text-sm">
           {[
-            ["Publica", "desde tu agente o con un formulario: enlace en vivo, capturas y qué hay que probar."],
-            ["Comparte", "con tu equipo o con un enlace de invitado que solo abre esa revisión."],
-            ["Revisa", "comentarios sobre capturas o la web en vivo. Aprobar o pedir cambios es explícito."],
-            ["Corrige", "llévate el feedback a tu agente como un prompt que revisas tú, y publica otra versión."],
+            ["Publish", "from your agent or a form: live link, screenshots and what to test."],
+            ["Share", "with your team, or with a guest link that only opens that review."],
+            ["Review", "comments on screenshots or the live site. Approving or requesting changes is explicit."],
+            ["Fix", "take the feedback to your agent as a prompt you check first, and publish another version."],
           ].map(([t, d], i) => (
             <li key={t} className="flex gap-3">
               <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-ink text-xs font-bold text-paper">
@@ -60,10 +60,10 @@ export default function Home() {
       <section className="self-start">
         {logged ? (
           <div className="card p-6">
-            <p className="text-sm text-muted">Sesión iniciada como</p>
+            <p className="text-sm text-muted">Signed in as</p>
             <p className="mt-1 text-lg font-semibold">{logged}</p>
             <a href="/app" className="btn btn-primary mt-6 w-full">
-              Ir a mis apps
+              Go to my apps
             </a>
           </div>
         ) : (
@@ -78,27 +78,27 @@ export default function Home() {
                   aria-selected={mode === m}
                   className="flex-1 justify-center"
                 >
-                  {m === "login" ? "Entrar" : "Crear cuenta"}
+                  {m === "login" ? "Sign in" : "Create account"}
                 </button>
               ))}
             </div>
             {mode === "signup" && (
               <div className="mb-4">
                 <label className="label" htmlFor="name">
-                  Nombre
+                  Name
                 </label>
                 <input id="name" name="name" className="input" required autoComplete="name" />
               </div>
             )}
             <div className="mb-4">
               <label className="label" htmlFor="email">
-                Correo
+                Email
               </label>
               <input id="email" name="email" type="email" className="input" required autoComplete="email" />
             </div>
             <div className="mb-6">
               <label className="label" htmlFor="password">
-                Contraseña
+                Password
               </label>
               <input
                 id="password"
@@ -116,10 +116,10 @@ export default function Home() {
               </p>
             )}
             <button className="btn btn-primary w-full" disabled={busy}>
-              {mode === "login" ? "Entrar" : "Crear cuenta"}
+              {mode === "login" ? "Sign in" : "Create account"}
             </button>
             <p className="mt-4 text-xs text-muted">
-              ¿Te han pasado un enlace para revisar? Ábrelo directamente: no necesitas cuenta para probar y comentar.
+              Got a link to review something? Just open it: you don’t need an account to test and comment.
             </p>
           </form>
         )}

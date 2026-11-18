@@ -10,12 +10,12 @@ import OpenApp, { waysToOpen } from "./OpenApp";
 import { TestPlan } from "./TestPlan";
 import type { Ctx } from "./types";
 
-export type Go = (tab: "revisar" | "versiones", opts?: { view?: "capturas" | "vivo" | "cambios"; panel?: "kit" | "test" | "comments"; flow?: string }) => void;
+export type Go = (tab: "review" | "versions", opts?: { view?: "screens" | "live" | "changes"; panel?: "kit" | "test" | "comments"; flow?: string }) => void;
 
 const VERDICT = {
-  approve: { text: "aprobó", Icon: CheckCircle, cls: "bg-ok text-okbg" },
-  changes: { text: "pidió cambios en", Icon: XCircle, cls: "bg-warn text-warnbg" },
-  comment: { text: "envió comentarios sobre", Icon: ChatCircle, cls: "bg-neutral text-ink" },
+  approve: { text: "approved", Icon: CheckCircle, cls: "bg-ok text-okbg" },
+  changes: { text: "requested changes on", Icon: XCircle, cls: "bg-warn text-warnbg" },
+  comment: { text: "sent comments on", Icon: ChatCircle, cls: "bg-neutral text-ink" },
 } as const;
 
 type Ev =
@@ -25,9 +25,9 @@ type Ev =
   | { at: number; t: "closed"; who: string };
 
 /**
- * Resumen de la revisión, como la conversación de una PR: la descripción, qué probar y
- * todo lo que ha pasado (versiones, comentarios, veredictos) en orden. A la derecha,
- * lo que hace falta para orientarse: siguiente paso, quién revisa, cómo abrir la app.
+ * Review overview, like the conversation of a PR: the description, what to test and
+ * everything that happened (versions, comments, verdicts) in order. On the right,
+ * what you need to find your way: next step, who reviews, how to open the app.
  */
 export default function Overview({
   ctx,
@@ -54,37 +54,37 @@ export default function Overview({
     ...comments.map((c) => ({ at: c.createdAt, t: "comment" as const, c })),
     ...(rv.status === "closed" && rv.closedAt ? [{ at: rv.closedAt, t: "closed" as const, who: rv.closedBy?.name ?? "" }] : []),
   ].sort((a, b) => a.at - b.at);
-  // La v1 ya la cuenta la descripción; no se repite en la actividad.
+  // The description already covers v1; it is not repeated in the activity.
   const first = versions.find((v) => v.number === 1);
 
   return (
     <div className="grid grid-cols-[minmax(0,1fr)] gap-8 lg:grid-cols-[minmax(0,1fr)_296px]">
       <div className="grid min-w-0 grid-cols-[minmax(0,1fr)] content-start gap-6">
         <p className="rounded-xl border border-line bg-card px-4 py-3 text-sm lg:hidden">
-          <span className="block text-xs font-semibold text-muted">Siguiente paso</span>
+          <span className="block text-xs font-semibold text-muted">Next step</span>
           {step.text}
         </p>
         <article className="box">
           <header className="box-head">
             <Avatar name={rv.author.name} size={22} />
             <span className="min-w-0 flex-1 truncate">
-              <b className="font-semibold">{rv.author.name}</b> <span className="text-muted">abrió la revisión</span>{" "}
+              <b className="font-semibold">{rv.author.name}</b> <span className="text-muted">opened this review</span>{" "}
               <span className="text-muted">
                 <Ago t={rv.createdAt} />
               </span>
-              {first && first.publishedBy.via === "apikey" && <span className="chip ml-2 bg-neutral text-muted">con su agente</span>}
+              {first && first.publishedBy.via === "apikey" && <span className="chip ml-2 bg-neutral text-muted">with their agent</span>}
             </span>
             {onEdit && (
               <button className="btn btn-quiet btn-sm" onClick={onEdit}>
-                <PencilSimple size={15} aria-hidden /> Editar
+                <PencilSimple size={15} aria-hidden /> Edit
               </button>
             )}
           </header>
           <div className="px-4 py-4">
-            <div className="max-w-[72ch] whitespace-pre-wrap text-[15px] leading-relaxed">{rv.purpose?.trim() || <span className="text-muted">Sin descripción.</span>}</div>
+            <div className="max-w-[72ch] whitespace-pre-wrap text-[15px] leading-relaxed">{rv.purpose?.trim() || <span className="text-muted">No description.</span>}</div>
             {r.summary?.trim() && r.summary.trim() !== rv.purpose?.trim() && (
               <div className="mt-4 max-w-[72ch] border-l-2 border-accent pl-3 text-[15px] leading-relaxed">
-                <p className="text-[13px] font-semibold text-muted">Novedades de la v{r.number}</p>
+                <p className="text-[13px] font-semibold text-muted">New in v{r.number}</p>
                 <p className="mt-0.5 whitespace-pre-wrap">{r.summary}</p>
               </div>
             )}
@@ -93,7 +93,7 @@ export default function Overview({
                 {r.flows.map((f) => (
                   <li key={f.key}>
                     <button
-                      onClick={() => go("revisar", { view: "capturas", flow: f.key })}
+                      onClick={() => go("review", { view: "screens", flow: f.key })}
                       className="flex w-full items-start gap-2.5 rounded-lg border border-line px-3 py-2.5 text-left transition-colors hover:border-field hover:bg-sunken/50"
                     >
                       <Path size={18} className="mt-0.5 shrink-0 text-accent-ink" aria-hidden />
@@ -101,7 +101,7 @@ export default function Overview({
                         <span className="block text-sm font-semibold">{f.title}</span>
                         <span className="block text-[13px] text-muted">
                           {f.description ? `${f.description} · ` : ""}
-                          {f.steps.length} {f.steps.length === 1 ? "pantalla" : "pantallas"}
+                          {f.steps.length} {f.steps.length === 1 ? "screen" : "screens"}
                         </span>
                       </span>
                     </button>
@@ -115,7 +115,7 @@ export default function Overview({
         <section className="box" aria-labelledby="o-test">
           <header className="box-head">
             <h2 id="o-test" className="font-semibold">
-              Qué probar
+              What to test
             </h2>
           </header>
           <div className="px-4 py-3">
@@ -125,7 +125,7 @@ export default function Overview({
 
         <section aria-labelledby="o-act">
           <h2 id="o-act" className="sr-only">
-            Actividad
+            Activity
           </h2>
           <ol className="relative grid grid-cols-[minmax(0,1fr)] gap-4 before:absolute before:bottom-2 before:left-[15px] before:top-2 before:w-px before:bg-line">
             {events.map((e, i) => {
@@ -137,7 +137,7 @@ export default function Overview({
                     </Dot>
                     <div className="min-w-0 flex-1 pt-1 text-sm">
                       <p>
-                        <b className="font-semibold">{e.v.publishedBy.name}</b> <span className="text-muted">publicó la</span>{" "}
+                        <b className="font-semibold">{e.v.publishedBy.name}</b> <span className="text-muted">published</span>{" "}
                         <a href={`/r/${e.v.id}`} className="font-semibold hover:underline">
                           v{e.v.number}
                         </a>{" "}
@@ -146,8 +146,8 @@ export default function Overview({
                         </span>
                       </p>
                       <p className="mt-0.5 truncate">{e.v.title}</p>
-                      <a href={`/r/${e.v.id}?revisar=cambios`} className="mt-1 inline-block text-[13px] font-medium text-accent-ink hover:underline">
-                        Ver qué cambió
+                      <a href={`/r/${e.v.id}?review=changes`} className="mt-1 inline-block text-[13px] font-medium text-accent-ink hover:underline">
+                        See what changed
                       </a>
                     </div>
                   </li>
@@ -161,7 +161,7 @@ export default function Overview({
                     </Dot>
                     <div className="min-w-0 flex-1 pt-1 text-sm">
                       <p>
-                        <b className="font-semibold">{e.v.author.name}</b> <span className="text-muted">{V.text} la v{e.n}</span>{" "}
+                        <b className="font-semibold">{e.v.author.name}</b> <span className="text-muted">{V.text} v{e.n}</span>{" "}
                         <span className="text-muted">
                           <Ago t={e.at} />
                         </span>
@@ -178,7 +178,7 @@ export default function Overview({
                       <LockSimple size={14} weight="bold" aria-hidden />
                     </Dot>
                     <p className="pt-1 text-sm">
-                      <b className="font-semibold">{e.who}</b> <span className="text-muted">cerró la revisión</span>{" "}
+                      <b className="font-semibold">{e.who}</b> <span className="text-muted">closed this review</span>{" "}
                       <span className="text-muted">
                         <Ago t={e.at} />
                       </span>
@@ -203,33 +203,33 @@ export default function Overview({
       </div>
 
       <aside className="grid content-start gap-0 text-sm lg:sticky lg:top-20 lg:max-h-[calc(100dvh-6rem)] lg:overflow-y-auto">
-        <Side title="Siguiente paso" className="hidden lg:block">
+        <Side title="Next step" className="hidden lg:block">
           <p className="mb-3 text-[13px] leading-snug text-ink" data-testid="next-step">
             {step.text}
           </p>
           <CircuitList stage={stage} version={latest.number} />
         </Side>
 
-        <Side title="Revisores">
+        <Side title="Reviewers">
           <Reviewers ctx={ctx} />
         </Side>
 
         {waysToOpen(r).length > 0 && (
-          <Side title="Abrir la app">
+          <Side title="Open the app">
             <OpenApp revision={r} size="compact" />
           </Side>
         )}
 
         <Side
-          title="Kit de prueba"
+          title="Test kit"
           action={
             kitSize(rv.testKit) > 0 ? (
-              <button className="font-medium text-accent-ink hover:underline" onClick={() => go("revisar", { panel: "kit" })}>
-                Ver
+              <button className="font-medium text-accent-ink hover:underline" onClick={() => go("review", { panel: "kit" })}>
+                View
               </button>
             ) : onEdit ? (
               <button className="font-medium text-accent-ink hover:underline" onClick={onEdit}>
-                Añadir
+                Add
               </button>
             ) : null
           }
@@ -238,7 +238,7 @@ export default function Overview({
         </Side>
 
         {(rv.branch || rv.prUrl) && (
-          <Side title="Código">
+          <Side title="Code">
             {rv.branch && (
               <p className="flex min-w-0 items-center gap-1.5 font-mono text-xs">
                 <GitBranch size={14} className="shrink-0" aria-hidden />
@@ -255,23 +255,23 @@ export default function Overview({
 
         {me.can.publish && (
           <Side
-            title="Invitados"
+            title="Guests"
             action={
               onShare && (
                 <button className="font-medium text-accent-ink hover:underline" onClick={onShare}>
-                  Compartir
+                  Share
                 </button>
               )
             }
           >
-            <p className="text-[13px] text-muted">{ctx.data.shared ? "Hay alguien más que puede revisarla." : "Nadie más la ve todavía."}</p>
+            <p className="text-[13px] text-muted">{ctx.data.shared ? "Someone else can review it." : "Nobody else can see it yet."}</p>
           </Side>
         )}
 
         {p.context?.trim() && (
-          <Side title="Sobre la app">
+          <Side title="About the app">
             <details className="text-[13px]">
-              <summary className="cursor-pointer text-muted">Contexto permanente</summary>
+              <summary className="cursor-pointer text-muted">Permanent context</summary>
               <p className="mt-2 whitespace-pre-wrap">{p.context}</p>
             </details>
           </Side>
@@ -304,7 +304,7 @@ function Reviewers({ ctx }: { ctx: Ctx }) {
   const others = [...new Map(comments.filter((c) => c.author.name !== review.author.name).map((c) => [`${c.author.kind}:${c.author.name}`, c.author])).entries()]
     .filter(([k]) => !seen.has(k))
     .map(([, a]) => a);
-  if (!vs.length && !others.length) return <p className="text-[13px] text-muted">Nadie ha revisado la v{latest.number} todavía.</p>;
+  if (!vs.length && !others.length) return <p className="text-[13px] text-muted">Nobody has reviewed v{latest.number} yet.</p>;
   return (
     <ul className="grid gap-2">
       {vs.map((v, i) => {
@@ -313,7 +313,7 @@ function Reviewers({ ctx }: { ctx: Ctx }) {
           <li key={i} className="flex items-center gap-2">
             <Avatar name={v.author.name} kind={v.author.kind} size={22} />
             <span className="min-w-0 flex-1 truncate">{v.author.name}</span>
-            <span title={`${V.text} la v${latest.number}`} className={v.kind === "approve" ? "text-ok" : v.kind === "changes" ? "text-warn" : "text-muted"}>
+            <span title={`${V.text} v${latest.number}`} className={v.kind === "approve" ? "text-ok" : v.kind === "changes" ? "text-warn" : "text-muted"}>
               <V.Icon size={18} weight="fill" aria-label={V.text} />
             </span>
           </li>
@@ -323,7 +323,7 @@ function Reviewers({ ctx }: { ctx: Ctx }) {
         <li key={`o${i}`} className="flex items-center gap-2">
           <Avatar name={a.name} kind={a.kind} size={22} />
           <span className="min-w-0 flex-1 truncate">{a.name}</span>
-          <span className="text-xs text-muted">{a.kind === "guest" ? "invitado, comentó" : "comentó"}</span>
+          <span className="text-xs text-muted">{a.kind === "guest" ? "guest, commented" : "commented"}</span>
         </li>
       ))}
     </ul>
@@ -334,13 +334,13 @@ function KitSummary({ ctx }: { ctx: Ctx }) {
   const rv = ctx.data.review;
   const n = kitSize(rv.testKit);
   const notes = rv.testData?.trim();
-  if (!n && !notes) return <p className="text-[13px] text-muted">Sin datos de prueba.</p>;
+  if (!n && !notes) return <p className="text-[13px] text-muted">No test data.</p>;
   return (
     <div className="grid gap-2">
       {n > 0 && (
         <p className="text-[13px]">
-          {n} {n === 1 ? "etiqueta" : "etiquetas"}
-          {rv.testKit!.pages.length > 1 ? ` en ${rv.testKit!.pages.length} páginas` : ""}: usuarios, códigos y lo que haga falta, con su QR.
+          {n} {n === 1 ? "label" : "labels"}
+          {rv.testKit!.pages.length > 1 ? ` on ${rv.testKit!.pages.length} pages` : ""}: users, codes and whatever else you need, each with its QR.
         </p>
       )}
       {notes && (
@@ -355,7 +355,7 @@ function KitSummary({ ctx }: { ctx: Ctx }) {
   );
 }
 
-/** Caja para comentar, al final de la conversación (como en una PR). */
+/** Comment box at the end of the conversation (like in a PR). */
 function Composer({ ctx, onFinish }: { ctx: Ctx; onFinish?: () => void }) {
   const [body, setBody] = useState("");
   const [busy, setBusy] = useState(false);
@@ -380,14 +380,14 @@ function Composer({ ctx, onFinish }: { ctx: Ctx; onFinish?: () => void }) {
       </span>
       <div className="box min-w-0 flex-1">
         <label htmlFor="o-comment" className="sr-only">
-          Comentario
+          Comment
         </label>
         <textarea
           id="o-comment"
           className="block min-h-24 w-full resize-y bg-transparent px-4 py-3 text-sm outline-none placeholder:text-muted"
           value={body}
           onChange={(e) => setBody(e.target.value)}
-          placeholder="Deja un comentario general. Para señalar algo concreto, márcalo en Revisar."
+          placeholder="Leave a general comment. To point at something specific, mark it in Review."
           onKeyDown={(e) => {
             if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) (e.currentTarget.form as HTMLFormElement).requestSubmit();
           }}
@@ -395,11 +395,11 @@ function Composer({ ctx, onFinish }: { ctx: Ctx; onFinish?: () => void }) {
         <div className="flex flex-wrap items-center justify-end gap-2 border-t border-line bg-sunken/40 px-3 py-2">
           {onFinish && (
             <button type="button" className="btn btn-sm" onClick={onFinish}>
-              Terminar revisión
+              Finish review
             </button>
           )}
           <button className="btn btn-strong btn-sm" disabled={busy || !body.trim()}>
-            Comentar
+            Comment
           </button>
         </div>
       </div>

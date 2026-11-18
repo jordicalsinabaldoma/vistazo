@@ -13,18 +13,18 @@ type S = { key: string; title: string; notes?: string; url?: string; assets: A[]
 type F = { key: string; title: string; description?: string; steps: S[] };
 type Pv = { kind: "web" | "qr" | "deeplink" | "download"; label: string; url: string; instructions?: string };
 
-const newStep = (n: number): S => ({ key: `paso-${n}`, title: `Paso ${n}`, assets: [] });
-const opt = <span className="font-normal text-muted">(opcional)</span>;
+const newStep = (n: number): S => ({ key: `step-${n}`, title: `Step ${n}`, assets: [] });
+const opt = <span className="font-normal text-muted">(optional)</span>;
 
 /**
- * Publicar a mano. Llama a la MISMA API que el agente (POST /api/projects/:id/revisions),
- * así el resultado es idéntico por las dos vías.
+ * Publish by hand. Calls the SAME API as the agent (POST /api/projects/:id/revisions),
+ * so the result is identical either way.
  */
 export default function Publish() {
   const { id } = useParams<{ id: string }>();
   const [name, setName] = useState("");
   const [reviews, setReviews] = useState<ReviewSummary[]>([]);
-  const [target, setTarget] = useState("new"); // "new" o id de una revisión abierta
+  const [target, setTarget] = useState("new"); // "new" or the id of an open review
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
   const [testData, setTestData] = useState("");
@@ -56,7 +56,7 @@ export default function Publish() {
     const r = d.revision;
     setLiveUrl(r.liveUrl ?? "");
     setPreviews(r.previews ?? []);
-    // La URL de cada paso era de la versión anterior: no se copia.
+    // Each step's URL belonged to the previous version: it is not copied.
     setFlows(
       r.flows.map((f: F) => ({
         ...f,
@@ -90,7 +90,7 @@ export default function Publish() {
     }
   }
 
-  // Subida rápida: cada fichero es un paso; «recorrido__paso.png» se coloca solo.
+  // Quick upload: each file is a step; "flow__step.png" lands in place by itself.
   async function quickDrop(files: FileList | null) {
     if (!files?.length) return;
     const list = Array.from(files).sort((a, b) => a.name.localeCompare(b.name));
@@ -99,7 +99,7 @@ export default function Publish() {
       try {
         const a = await uploadFile(id, file);
         const base = file.name.replace(/\.[^.]+$/, "");
-        const [fk, sk] = base.includes("__") ? base.split("__") : ["capturas", base];
+        const [fk, sk] = base.includes("__") ? base.split("__") : ["screenshots", base];
         setFlows((fs) => {
           const c = fs.map((f) => ({ ...f, steps: [...f.steps] }));
           let f = c.find((x) => x.key === slug(fk));
@@ -144,7 +144,7 @@ export default function Publish() {
       location.href = `/r/${r.id}`;
     } catch (e) {
       const er = e as Error;
-      setErr(er.message === "Datos no válidos" ? "Revisa los campos: los enlaces tienen que ser URLs completas (https://…)." : er.message);
+      setErr(er.message === "Invalid data" ? "Check the fields: links must be full URLs (https://…)." : er.message);
       setSending(false);
     }
   }
@@ -153,24 +153,24 @@ export default function Publish() {
     <>
       <TopBar>
         <Crumb href={`/p/${id}`}>{name || "…"}</Crumb>
-        <Crumb>Publicar</Crumb>
+        <Crumb>Publish</Crumb>
       </TopBar>
       <main className="mx-auto w-full max-w-3xl px-4 py-8">
-        <h1 className="text-2xl font-semibold tracking-tight">Publicar para revisar</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Publish for review</h1>
         <p className="mt-1 max-w-[65ch] text-sm text-muted">
-          Lo mismo que hace tu agente con <code className="font-mono">vistazo publish</code>. Una revisión es un cambio con su propósito; cada vuelta de corrección es una versión nueva dentro de ella.
+          The same thing your agent does with <code className="font-mono">vistazo publish</code>. A review is one change with its purpose; each round of fixes is a new version inside it.
         </p>
 
-        <section className="card mt-6 grid gap-5 p-5" aria-label="Datos de la revisión">
+        <section className="card mt-6 grid gap-5 p-5" aria-label="Review details">
           <div>
             <label className="label" htmlFor="target">
-              Dónde
+              Where
             </label>
             <select id="target" className="input" value={target} onChange={(e) => setTarget(e.target.value)}>
-              <option value="new">Revisión nueva</option>
+              <option value="new">New review</option>
               {reviews.map((r) => (
                 <option key={r.id} value={r.id}>
-                  Versión nueva (v{r.version + 1}) de #{r.number} {r.title}
+                  New version (v{r.version + 1}) of #{r.number} {r.title}
                 </option>
               ))}
             </select>
@@ -180,33 +180,33 @@ export default function Publish() {
             <>
               <div>
                 <label className="label" htmlFor="t">
-                  Título
+                  Title
                 </label>
-                <input id="t" className="input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Nuevo carrito y pago" required />
+                <input id="t" className="input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="New cart and checkout" required />
               </div>
               <div>
                 <label className="label" htmlFor="s">
-                  Qué cambia
+                  What changes
                 </label>
-                <textarea id="s" className="input" rows={4} value={summary} onChange={(e) => setSummary(e.target.value)} placeholder="Qué has cambiado y qué hay que mirar." />
+                <textarea id="s" className="input" rows={4} value={summary} onChange={(e) => setSummary(e.target.value)} placeholder="What you changed and what to look at." />
               </div>
               <div>
                 <label className="label" htmlFor="td">
-                  Datos de prueba {opt}
+                  Test notes {opt}
                 </label>
-                <textarea id="td" className="input font-mono text-[13px]" rows={2} value={testData} onChange={(e) => setTestData(e.target.value)} placeholder="Usuario de prueba, tarjeta de test…" />
-                <p className="hint">Solo datos de prueba. Nunca contraseñas ni datos reales.</p>
+                <textarea id="td" className="input font-mono text-[13px]" rows={2} value={testData} onChange={(e) => setTestData(e.target.value)} placeholder="Test user, test card…" />
+                <p className="hint">Test data only. Never real passwords or real data.</p>
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
                   <label className="label" htmlFor="br">
-                    Rama {opt}
+                    Branch {opt}
                   </label>
-                  <input id="br" className="input font-mono text-[13px]" value={branch} onChange={(e) => setBranch(e.target.value)} placeholder="feature/pago" />
+                  <input id="br" className="input font-mono text-[13px]" value={branch} onChange={(e) => setBranch(e.target.value)} placeholder="feature/checkout" />
                 </div>
                 <div>
                   <label className="label" htmlFor="pr">
-                    Enlace a la PR {opt}
+                    PR link {opt}
                   </label>
                   <input id="pr" type="url" className="input" value={prUrl} onChange={(e) => setPrUrl(e.target.value)} placeholder="https://github.com/…/pull/42" />
                 </div>
@@ -216,20 +216,20 @@ export default function Publish() {
             <>
               <div>
                 <label className="label" htmlFor="t">
-                  Título de esta versión {opt}
+                  Title of this version {opt}
                 </label>
                 <input id="t" className="input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={current?.title} />
               </div>
               <div>
                 <label className="label" htmlFor="s">
-                  Qué cambia en esta versión
+                  What changes in this version
                 </label>
-                <textarea id="s" className="input" rows={3} value={summary} onChange={(e) => setSummary(e.target.value)} placeholder="Qué has corregido desde la versión anterior." />
-                <p className="hint">Los comentarios abiertos de la revisión pasan solos a la versión nueva.</p>
+                <textarea id="s" className="input" rows={3} value={summary} onChange={(e) => setSummary(e.target.value)} placeholder="What you fixed since the previous version." />
+                <p className="hint">The review’s open comments carry over to the new version on their own.</p>
               </div>
               <div>
                 <button type="button" className="btn btn-sm" onClick={basedOnPrevious}>
-                  Partir de la v{current?.version}: copiar capturas y enlaces
+                  Start from v{current?.version}: copy screenshots and links
                 </button>
               </div>
             </>
@@ -237,35 +237,35 @@ export default function Publish() {
 
           <div>
             <label className="label" htmlFor="u">
-              Enlace en vivo {opt}
+              Live link {opt}
             </label>
-            <input id="u" type="url" className="input" value={liveUrl} onChange={(e) => setLiveUrl(e.target.value)} placeholder="https://… (web o preview)" />
+            <input id="u" type="url" className="input" value={liveUrl} onChange={(e) => setLiveUrl(e.target.value)} placeholder="https://… (site or preview)" />
           </div>
           <div>
-            <span className="label">Otras formas de probarla {opt}</span>
-            <p className="hint -mt-1 mb-2">QR de Expo, enlace que abre la app, descarga.</p>
+            <span className="label">Other ways to try it {opt}</span>
+            <p className="hint -mt-1 mb-2">Expo QR, a link that opens the app, a download.</p>
             {previews.map((p, i) => (
               <div key={i} className="mb-2 grid gap-2 sm:grid-cols-[130px_1fr_2fr_auto]">
                 <select
                   className="input"
-                  aria-label="Tipo"
+                  aria-label="Type"
                   value={p.kind}
                   onChange={(e) => setPreviews(previews.map((x, j) => (j === i ? { ...x, kind: e.target.value as Pv["kind"] } : x)))}
                 >
                   <option value="qr">QR</option>
-                  <option value="deeplink">Enlace a la app</option>
-                  <option value="download">Descarga</option>
+                  <option value="deeplink">App link</option>
+                  <option value="download">Download</option>
                   <option value="web">Web</option>
                 </select>
-                <input className="input" placeholder="Etiqueta" aria-label="Etiqueta" value={p.label} onChange={(e) => setPreviews(previews.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)))} />
+                <input className="input" placeholder="Label" aria-label="Label" value={p.label} onChange={(e) => setPreviews(previews.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)))} />
                 <input className="input" placeholder="URL" aria-label="URL" value={p.url} onChange={(e) => setPreviews(previews.map((x, j) => (j === i ? { ...x, url: e.target.value } : x)))} />
                 <button type="button" className="btn btn-danger" onClick={() => setPreviews(previews.filter((_, j) => j !== i))}>
-                  Quitar
+                  Remove
                 </button>
               </div>
             ))}
             <button type="button" className="btn btn-sm" onClick={() => setPreviews([...previews, { kind: "qr", label: "", url: "" }])}>
-              <Plus size={14} aria-hidden /> Añadir
+              <Plus size={14} aria-hidden /> Add
             </button>
           </div>
         </section>
@@ -273,24 +273,24 @@ export default function Publish() {
         <section className="mt-8" aria-labelledby="caps">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 id="caps" className="text-lg font-semibold">
-              Capturas por pasos
+              Screenshots by step
             </h2>
             <div className="flex gap-2">
               <label className="btn btn-sm cursor-pointer">
-                <UploadSimple size={15} aria-hidden /> Subida rápida
+                <UploadSimple size={15} aria-hidden /> Quick upload
                 <input type="file" multiple hidden accept="image/*,video/*,.pdf,.zip,.html" onChange={(e) => quickDrop(e.target.files)} />
               </label>
-              <button className="btn btn-sm" onClick={() => setFlows([...flows, { key: `recorrido-${flows.length + 1}`, title: "", steps: [newStep(1)] }])}>
-                <Plus size={14} aria-hidden /> Recorrido
+              <button className="btn btn-sm" onClick={() => setFlows([...flows, { key: `flow-${flows.length + 1}`, title: "", steps: [newStep(1)] }])}>
+                <Plus size={14} aria-hidden /> Flow
               </button>
             </div>
           </div>
           <p className="mt-1 max-w-[65ch] text-sm text-muted">
-            Capturas, vídeos o archivos de cada paso. En la subida rápida, un fichero <code className="font-mono">recorrido__paso.png</code> se coloca solo. Para apps nativas (Expo, iOS, Android) sube aquí las capturas del dispositivo.
+            Screenshots, videos or files for each step. With quick upload, a file named <code className="font-mono">flow__step.png</code> lands in place by itself. For native apps (Expo, iOS, Android), upload the device screenshots here.
           </p>
           {busy > 0 && (
             <p className="mt-2 text-sm text-warn" role="status">
-              Subiendo {busy}…
+              Uploading {busy}…
             </p>
           )}
 
@@ -299,20 +299,20 @@ export default function Publish() {
               <div className="grid gap-2 sm:grid-cols-[1fr_180px_auto]">
                 <input
                   className="input font-medium"
-                  placeholder="Nombre del recorrido"
-                  aria-label="Nombre del recorrido"
+                  placeholder="Flow name"
+                  aria-label="Flow name"
                   value={f.title}
-                  onChange={(e) => upd(fi, (x) => ({ ...x, title: e.target.value, key: x.key.startsWith("recorrido-") ? slug(e.target.value) : x.key }))}
+                  onChange={(e) => upd(fi, (x) => ({ ...x, title: e.target.value, key: x.key.startsWith("flow-") ? slug(e.target.value) : x.key }))}
                 />
-                <input className="input font-mono text-xs" aria-label="Clave estable del recorrido" title="Clave estable: sirve para comparar entre versiones" value={f.key} onChange={(e) => upd(fi, (x) => ({ ...x, key: slug(e.target.value) }))} />
+                <input className="input font-mono text-xs" aria-label="Stable flow key" title="Stable key: used to compare between versions" value={f.key} onChange={(e) => upd(fi, (x) => ({ ...x, key: slug(e.target.value) }))} />
                 <div className="flex">
-                  <button className="btn btn-quiet px-2" aria-label="Subir recorrido" onClick={() => setFlows(move(flows, fi, -1))}>
+                  <button className="btn btn-quiet px-2" aria-label="Move flow up" onClick={() => setFlows(move(flows, fi, -1))}>
                     <ArrowUp size={16} aria-hidden />
                   </button>
-                  <button className="btn btn-quiet px-2" aria-label="Bajar recorrido" onClick={() => setFlows(move(flows, fi, 1))}>
+                  <button className="btn btn-quiet px-2" aria-label="Move flow down" onClick={() => setFlows(move(flows, fi, 1))}>
                     <ArrowDown size={16} aria-hidden />
                   </button>
-                  <button className="btn btn-danger px-2" aria-label="Quitar recorrido" onClick={() => setFlows(flows.filter((_, j) => j !== fi))}>
+                  <button className="btn btn-danger px-2" aria-label="Remove flow" onClick={() => setFlows(flows.filter((_, j) => j !== fi))}>
                     <Trash size={16} aria-hidden />
                   </button>
                 </div>
@@ -320,8 +320,8 @@ export default function Publish() {
               <textarea
                 className="input mt-2"
                 rows={2}
-                aria-label="Descripción del recorrido"
-                placeholder="Descríbelo con palabras: «entra como cliente, crea un pedido y llega al pago»"
+                aria-label="Flow description"
+                placeholder='Describe it in words: "sign in as a customer, create an order and reach checkout"'
                 value={f.description ?? ""}
                 onChange={(e) => upd(fi, (x) => ({ ...x, description: e.target.value }))}
               />
@@ -331,19 +331,19 @@ export default function Publish() {
                     <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
                       <input
                         className="input"
-                        aria-label={`Paso ${si + 1}`}
+                        aria-label={`Step ${si + 1}`}
                         value={s.title}
-                        onChange={(e) => updStep(fi, si, (x) => ({ ...x, title: e.target.value, key: /^paso-\d+$/.test(x.key) ? slug(e.target.value) : x.key }))}
+                        onChange={(e) => updStep(fi, si, (x) => ({ ...x, title: e.target.value, key: /^step-\d+$/.test(x.key) ? slug(e.target.value) : x.key }))}
                       />
-                      <input className="input" placeholder="Pantalla o URL" aria-label="Pantalla o URL" value={s.url ?? ""} onChange={(e) => updStep(fi, si, (x) => ({ ...x, url: e.target.value }))} />
+                      <input className="input" placeholder="Screen or URL" aria-label="Screen or URL" value={s.url ?? ""} onChange={(e) => updStep(fi, si, (x) => ({ ...x, url: e.target.value }))} />
                       <div className="flex">
-                        <button className="btn btn-quiet px-2" aria-label="Subir paso" onClick={() => upd(fi, (x) => ({ ...x, steps: move(x.steps, si, -1) }))}>
+                        <button className="btn btn-quiet px-2" aria-label="Move step up" onClick={() => upd(fi, (x) => ({ ...x, steps: move(x.steps, si, -1) }))}>
                           <ArrowUp size={16} aria-hidden />
                         </button>
-                        <button className="btn btn-quiet px-2" aria-label="Bajar paso" onClick={() => upd(fi, (x) => ({ ...x, steps: move(x.steps, si, 1) }))}>
+                        <button className="btn btn-quiet px-2" aria-label="Move step down" onClick={() => upd(fi, (x) => ({ ...x, steps: move(x.steps, si, 1) }))}>
                           <ArrowDown size={16} aria-hidden />
                         </button>
-                        <button className="btn btn-danger px-2" aria-label="Quitar paso" onClick={() => upd(fi, (x) => ({ ...x, steps: x.steps.filter((_, j) => j !== si) }))}>
+                        <button className="btn btn-danger px-2" aria-label="Remove step" onClick={() => upd(fi, (x) => ({ ...x, steps: x.steps.filter((_, j) => j !== si) }))}>
                           <Trash size={16} aria-hidden />
                         </button>
                       </div>
@@ -359,7 +359,7 @@ export default function Publish() {
                           )}
                           <button
                             className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-ink/80 text-paper"
-                            aria-label={`Quitar ${a.name}`}
+                            aria-label={`Remove ${a.name}`}
                             onClick={() => updStep(fi, si, (x) => ({ ...x, assets: x.assets.filter((_, j) => j !== ai) }))}
                           >
                             <Trash size={12} aria-hidden />
@@ -368,7 +368,7 @@ export default function Publish() {
                       ))}
                       <label className="flex h-24 w-24 cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-field text-xs text-muted hover:border-ink/50 hover:text-ink">
                         <Plus size={16} aria-hidden />
-                        Adjuntar
+                        Attach
                         <input type="file" multiple hidden accept="image/*,video/*,.pdf,.zip,.html" onChange={(e) => addFiles(fi, si, e.target.files)} />
                       </label>
                     </div>
@@ -376,7 +376,7 @@ export default function Publish() {
                 ))}
               </ol>
               <button className="btn btn-sm mt-3" onClick={() => upd(fi, (x) => ({ ...x, steps: [...x.steps, newStep(x.steps.length + 1)] }))}>
-                <Plus size={14} aria-hidden /> Paso
+                <Plus size={14} aria-hidden /> Step
               </button>
             </div>
           ))}
@@ -387,10 +387,10 @@ export default function Publish() {
         </div>
         <div className="mt-6 flex flex-wrap items-center gap-3">
           <button className="btn btn-primary" disabled={!ready || busy > 0 || sending} onClick={publish}>
-            {target === "new" ? "Publicar revisión" : `Publicar v${(current?.version ?? 0) + 1}`}
+            {target === "new" ? "Publish review" : `Publish v${(current?.version ?? 0) + 1}`}
           </button>
           <Link href={`/p/${id}`} className="btn btn-quiet">
-            Cancelar
+            Cancel
           </Link>
         </div>
       </main>

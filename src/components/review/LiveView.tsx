@@ -8,9 +8,9 @@ type Live = Extract<Comment["anchor"], { type: "live" }>;
 type Picked = { x: number; y: number; selector?: string; text?: string; url: string; viewport?: { w: number; h: number } };
 
 const DEVICES = [
-  ["Escritorio", "100%"],
+  ["Desktop", "100%"],
   ["Tablet", "820px"],
-  ["Móvil", "390px"],
+  ["Mobile", "390px"],
 ] as const;
 
 const samePage = (a: string, b: string) => {
@@ -23,11 +23,11 @@ const samePage = (a: string, b: string) => {
 };
 
 /**
- * Web en vivo dentro de Vistazo. Dos modos:
- * - Con el puente (bridge.js incluido en la app): el revisor señala un ELEMENTO;
- *   se guardan URL real, selector, texto y posición. Los pines se pintan dentro de la app.
- * - Sin puente (cualquier web que se deje enmarcar): capa transparente encima del iframe;
- *   se guarda la posición en la ventana y la URL que indique el revisor.
+ * Live web inside Vistazo. Two modes:
+ * - With the bridge (bridge.js included in the app): the reviewer points at an ELEMENT;
+ *   the real URL, selector, text and position are saved. Pins are drawn inside the app.
+ * - Without the bridge (any site that allows framing): a transparent layer over the iframe;
+ *   the position in the window and the URL the reviewer gives are saved.
  */
 export default function LiveView({ ctx, url }: { ctx: Ctx; url: string }) {
   const frame = useRef<HTMLIFrameElement>(null);
@@ -66,7 +66,7 @@ export default function LiveView({ ctx, url }: { ctx: Ctx; url: string }) {
     return () => window.removeEventListener("message", onMsg);
   }, [origin]);
 
-  // Pines dentro de la app (solo con puente).
+  // Pins inside the app (bridge only).
   useEffect(() => {
     if (!bridge) return;
     post({
@@ -102,35 +102,35 @@ export default function LiveView({ ctx, url }: { ctx: Ctx; url: string }) {
       <div className="mb-3 flex flex-wrap items-center gap-2">
         {ctx.data.me.can.comment && (
           <button className={`btn ${mode ? "btn-quiet ring-2 ring-accent" : "btn-strong"}`} onClick={toggle} aria-pressed={mode}>
-            {mode ? (bridge ? "Toca un elemento (Esc para salir)" : "Toca donde quieras comentar") : "Comentar sobre la web"}
+            {mode ? (bridge ? "Tap an element (Esc to exit)" : "Tap where you want to comment") : "Comment on the app"}
           </button>
         )}
-        <div className="segmented" role="group" aria-label="Tamaño de pantalla">
+        <div className="segmented" role="group" aria-label="Screen size">
           {DEVICES.map(([l, w]) => (
             <button key={l} onClick={() => setDevice(w)} aria-selected={device === w} aria-pressed={device === w}>
               {l}
             </button>
           ))}
         </div>
-        <span className="text-xs text-muted" title={bridge ? "La app incluye bridge.js" : "La app no incluye bridge.js"}>
-          {bridge ? "Los comentarios se pegan al elemento que toques." : "Los comentarios se guardan por posición en la pantalla."}
+        <span className="text-xs text-muted" title={bridge ? "The app includes bridge.js" : "The app does not include bridge.js"}>
+          {bridge ? "Comments stick to the element you tap." : "Comments are saved by position on the screen."}
         </span>
         <input
-          aria-label={bridge ? "Pantalla actual de la app" : "En qué pantalla estás (escríbela)"}
+          aria-label={bridge ? "Current screen of the app" : "Which screen you are on (type it)"}
           className="input min-w-[200px] flex-1 font-mono text-xs"
           value={current}
           readOnly={bridge}
           onChange={(e) => setCurrent(e.target.value)}
-          title={bridge ? "URL real de la app" : "Indica en qué pantalla estás (sin puente no se puede leer)"}
+          title={bridge ? "Real URL of the app" : "Say which screen you are on (it cannot be read without the bridge)"}
         />
         <a className="btn" href={current} target="_blank" rel="noopener noreferrer">
-          Abrir aparte
+          Open separately
         </a>
       </div>
       <div className="flex justify-center rounded-xl border border-line bg-sunken p-3">
         <div className="relative h-[76dvh] overflow-hidden rounded-lg bg-white shadow-[0_2px_8px_rgb(var(--shadow)/0.12)]" style={{ width: device, maxWidth: "100%" }}>
-          <iframe ref={frame} src={url} title="La app que se revisa, en vivo" className="h-full w-full" onLoad={() => post({ vz: "ping" })} />
-          {/* Capa para webs sin puente */}
+          <iframe ref={frame} src={url} title="The app under review, live" className="h-full w-full" onLoad={() => post({ vz: "ping" })} />
+          {/* Layer for sites without the bridge */}
           {mode && !bridge && (
             <div
               data-testid="live-overlay"
@@ -157,7 +157,7 @@ export default function LiveView({ ctx, url }: { ctx: Ctx; url: string }) {
                   className={`pin z-10 ${c.status === "resolved" ? "pin-resolved" : ""}`}
                   style={{ left: `${a.x * 100}%`, top: `${a.y * 100}%` }}
                   title={c.body}
-                  aria-label={`Comentario ${ctx.numberOf(c)}: ${c.body.slice(0, 80)}`}
+                  aria-label={`Comment ${ctx.numberOf(c)}: ${c.body.slice(0, 80)}`}
                 >
                   {ctx.numberOf(c)}
                 </button>
@@ -168,7 +168,7 @@ export default function LiveView({ ctx, url }: { ctx: Ctx; url: string }) {
               <Composer
                 x={draft.x}
                 y={draft.y}
-                hint={draft.selector ? `${draft.selector}${draft.text ? ` · «${draft.text.slice(0, 40)}»` : ""}` : draft.url}
+                hint={draft.selector ? `${draft.selector}${draft.text ? ` · "${draft.text.slice(0, 40)}"` : ""}` : draft.url}
                 onCancel={() => setDraft(null)}
                 onSave={async (body) => {
                   await ctx.addComment({ type: "live", ...draft }, body);
@@ -181,7 +181,7 @@ export default function LiveView({ ctx, url }: { ctx: Ctx; url: string }) {
       </div>
       {live.length > here.length && (
         <p className="mt-2 text-sm text-muted">
-          {live.length - here.length === 1 ? "Hay 1 comentario en otra pantalla" : `Hay ${live.length - here.length} comentarios en otras pantallas`}: están en la lista de comentarios.
+          {live.length - here.length === 1 ? "There is 1 comment on another screen" : `There are ${live.length - here.length} comments on other screens`}: they are in the comment list.
         </p>
       )}
     </div>

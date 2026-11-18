@@ -3,10 +3,10 @@ import { notFound } from "./http";
 import type { Review } from "./model";
 import { ensureMigrated, getReview, getRevision } from "./revisions";
 
-/** Versión + revisión + acceso, comprobando el alcance de los enlaces de invitado. */
+/** Version + review + access, checking the scope of guest links. */
 export async function revAccess(req: Request, revisionId: string) {
   let rev = await getRevision(revisionId);
-  if (!rev) throw notFound("Versión no encontrada");
+  if (!rev) throw notFound("Version not found");
   if (!rev.reviewId) {
     await ensureMigrated(rev.projectId);
     rev = (await getRevision(revisionId))!;
@@ -19,7 +19,7 @@ export async function revAccess(req: Request, revisionId: string) {
 
 export async function reviewAccess(req: Request, reviewId: string) {
   const review = await getReview(reviewId);
-  if (!review) throw notFound("Revisión no encontrada");
+  if (!review) throw notFound("Review not found");
   const a = await access(req, review.projectId);
   needScope(a, review.id);
   return { review, a };

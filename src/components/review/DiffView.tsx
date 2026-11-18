@@ -4,10 +4,10 @@ import { fileUrl } from "@/lib/client";
 import type { Asset, Revision } from "@/lib/model";
 
 type Pair = { flow: string; step: string; key: string; before?: Asset; after?: Asset };
-type Box = { x: number; y: number; w: number; h: number }; // fracciones 0..1 de la imagen «ahora»
+type Box = { x: number; y: number; w: number; h: number }; // fractions 0..1 of the "now" image
 type Result = { pct: number; boxes: Box[]; note?: string } | { error: string };
 
-/** Empareja capturas por recorrido/paso (claves estables) entre dos versiones. */
+/** Pairs screenshots by flow/step (stable keys) between two versions. */
 function pairs(prev: Revision, cur: Revision): Pair[] {
   const img = (s?: { assets: Asset[] }) => s?.assets.find((a) => a.kind === "image");
   const out: Pair[] = [];
@@ -36,12 +36,12 @@ function load(src: string) {
   });
 }
 
-const W = 320; // ancho de cálculo: rápido y suficiente para encontrar zonas
+const W = 320; // working width: fast and enough to find zones
 const CELL = 8;
 
 /**
- * Compara dos capturas a baja resolución y devuelve ZONAS que cambian (rectángulos),
- * no un mar de píxeles rojos. Las celdas cercanas se agrupan en una sola zona.
+ * Compares two screenshots at low resolution and returns ZONES that change (rectangles),
+ * not a sea of red pixels. Nearby cells are grouped into one zone.
  */
 async function compare(before: Asset, after: Asset): Promise<Result> {
   const [a, b] = await Promise.all([load(fileUrl(before.pathname)), load(fileUrl(after.pathname))]);
@@ -72,7 +72,7 @@ async function compare(before: Asset, after: Asset): Promise<Result> {
     }
   const on = new Uint8Array(cols * rows);
   for (let i = 0; i < on.length; i++) on[i] = hits[i] > CELL * CELL * 0.04 ? 1 : 0;
-  // Agrupa celdas activas (vecinas a 2 celdas o menos) en zonas.
+  // Group active cells (neighbours 2 cells apart or less) into zones.
   const seen = new Uint8Array(cols * rows);
   const boxes: Box[] = [];
   for (let i = 0; i < on.length; i++) {
@@ -96,13 +96,13 @@ async function compare(before: Asset, after: Asset): Promise<Result> {
         }
     }
     if (n < 2) continue;
-    // Coordenadas relativas a la captura «ahora» (sobre la que se dibujan las zonas).
+    // Coordinates relative to the "now" screenshot (the zones are drawn on it).
     const top = Math.min(1, (y0 * CELL) / Hb), bottom = Math.min(1, ((y1 + 1) * CELL) / Hb);
     if (bottom > top) boxes.push({ x: (x0 * CELL) / W, y: top, w: Math.min(1, ((x1 + 1) * CELL) / W) - (x0 * CELL) / W, h: bottom - top });
   }
   boxes.sort((p, q) => p.y - q.y || p.x - q.x);
   const note =
-    Math.abs(a.naturalWidth / a.naturalHeight - b.naturalWidth / b.naturalHeight) > 0.02 ? `La pantalla cambió de tamaño (${a.naturalWidth}×${a.naturalHeight} a ${b.naturalWidth}×${b.naturalHeight}).` : undefined;
+    Math.abs(a.naturalWidth / a.naturalHeight - b.naturalWidth / b.naturalHeight) > 0.02 ? `The screen changed size (${a.naturalWidth}×${a.naturalHeight} to ${b.naturalWidth}×${b.naturalHeight}).` : undefined;
   return { pct: (changed / (W * H)) * 100, boxes, note };
 }
 
@@ -114,12 +114,12 @@ export default function DiffView({ prev, cur }: { prev: Revision | null; cur: Re
   useEffect(() => {
     let alive = true;
     (async () => {
-      // De dos en dos, para no bloquear la página.
+      // Two at a time, so the page does not freeze.
       const queue = ps.filter((p) => p.before && p.after);
       const work = async () => {
         while (alive && queue.length) {
           const p = queue.shift()!;
-          const r = await compare(p.before!, p.after!).catch(() => ({ error: "No se pudieron cargar las capturas." }));
+          const r = await compare(p.before!, p.after!).catch(() => ({ error: "Could not load the screenshots." }));
           if (alive) setResults((x) => ({ ...x, [p.key]: r }));
           await new Promise((ok) => setTimeout(ok, 0));
         }
@@ -131,8 +131,8 @@ export default function DiffView({ prev, cur }: { prev: Revision | null; cur: Re
     };
   }, [ps]);
 
-  if (!prev) return <p className="card p-6 text-muted">Es la primera versión: no hay otra con la que comparar.</p>;
-  if (!ps.length) return <p className="card p-6 text-muted">No hay capturas que comparar entre la v{prev.number} y la v{cur.number}.</p>;
+  if (!prev) return <p className="card p-6 text-muted">This is the first version: there is nothing to compare with.</p>;
+  if (!ps.length) return <p className="card p-6 text-muted">There are no screenshots to compare between v{prev.number} and v{cur.number}.</p>;
 
   const same = (p: Pair) => {
     const r = results[p.key];
@@ -149,19 +149,19 @@ export default function DiffView({ prev, cur }: { prev: Revision | null; cur: Re
     <div className="grid gap-10">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <p className="text-[15px]" aria-live="polite">
-          De la v{prev.number} a la v{cur.number}:{" "}
+          From v{prev.number} to v{cur.number}:{" "}
           <b>
-            {nChanged} {nChanged === 1 ? "pantalla cambia" : "pantallas cambian"}
+            {nChanged} {nChanged === 1 ? "screen changes" : "screens change"}
           </b>
-          {nSame > 0 && `, ${nSame} ${nSame === 1 ? "igual" : "iguales"}`}
-          {nNew > 0 && `, ${nNew} ${nNew === 1 ? "nueva" : "nuevas"}`}
-          {nGone > 0 && `, ${nGone} ${nGone === 1 ? "quitada" : "quitadas"}`}
-          {pending > 0 && <span className="text-muted"> (comparando {pending}…)</span>}
+          {nSame > 0 && `, ${nSame} ${"unchanged"}`}
+          {nNew > 0 && `, ${nNew} ${"new"}`}
+          {nGone > 0 && `, ${nGone} ${"removed"}`}
+          {pending > 0 && <span className="text-muted"> (comparing {pending}…)</span>}
         </p>
         {nSame > 0 && (
           <label className="ml-auto inline-flex cursor-pointer items-center gap-2 text-sm text-muted">
             <input type="checkbox" className="h-4 w-4 accent-[var(--accent)]" checked={all} onChange={(e) => setAll(e.target.checked)} />
-            Mostrar también las iguales
+            Also show unchanged ones
           </label>
         )}
       </div>
@@ -173,9 +173,9 @@ export default function DiffView({ prev, cur }: { prev: Revision | null; cur: Re
           {p.before && p.after ? (
             <ImageDiff before={p.before} after={p.after} result={results[p.key]} from={prev.number} to={cur.number} />
           ) : p.after ? (
-            <Single asset={p.after} label={`Nueva en la v${cur.number}`} cls="bg-okbg text-ok" />
+            <Single asset={p.after} label={`New in v${cur.number}`} cls="bg-okbg text-ok" />
           ) : (
-            <Single asset={p.before!} label={`Ya no está en la v${cur.number}`} cls="bg-badbg text-bad" />
+            <Single asset={p.before!} label={`Gone in v${cur.number}`} cls="bg-badbg text-bad" />
           )}
         </section>
       ))}
@@ -198,24 +198,24 @@ function ImageDiff({ before, after, result, from, to }: { before: Asset; after: 
   const [cut, setCut] = useState(50);
   const boxes = result && !("error" in result) ? result.boxes : [];
   const status = !result
-    ? { t: "Comparando…", c: "bg-neutral text-muted" }
+    ? { t: "Comparing…", c: "bg-neutral text-muted" }
     : "error" in result
       ? { t: result.error, c: "bg-badbg text-bad" }
       : boxes.length === 0
-        ? { t: "Sin cambios visibles", c: "bg-okbg text-ok" }
-        : { t: `${boxes.length} ${boxes.length === 1 ? "zona cambia" : "zonas cambian"}`, c: "bg-warnbg text-warn" };
+        ? { t: "No visible changes", c: "bg-okbg text-ok" }
+        : { t: `${boxes.length} ${boxes.length === 1 ? "zone changes" : "zones change"}`, c: "bg-warnbg text-warn" };
 
   return (
     <div className="max-w-4xl">
       <div className="mb-2 flex flex-wrap items-center gap-2">
         <span className={`chip ${status.c}`}>{status.t}</span>
         {result && !("error" in result) && result.note && <span className="text-xs text-muted">{result.note}</span>}
-        <div className="segmented ml-auto" role="tablist" aria-label="Forma de comparar">
+        <div className="segmented ml-auto" role="tablist" aria-label="How to compare">
           {(
             [
-              ["zones", "Zonas"],
-              ["slider", "Antes y ahora"],
-              ["side", "Lado a lado"],
+              ["zones", "Zones"],
+              ["slider", "Before and now"],
+              ["side", "Side by side"],
             ] as const
           ).map(([k, l]) => (
             <button key={k} role="tab" aria-selected={mode === k} onClick={() => setMode(k)}>
@@ -227,7 +227,7 @@ function ImageDiff({ before, after, result, from, to }: { before: Asset; after: 
       {mode === "zones" && (
         <div className="relative overflow-hidden rounded-xl border border-line bg-white">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={fileUrl(after.pathname)} alt={`Captura de la v${to} con las zonas que cambian marcadas`} loading="lazy" className="block w-full" />
+          <img src={fileUrl(after.pathname)} alt={`Screenshot of v${to} with the changed zones marked`} loading="lazy" className="block w-full" />
           {boxes.map((b, i) => (
             <span
               key={i}
@@ -244,9 +244,9 @@ function ImageDiff({ before, after, result, from, to }: { before: Asset; after: 
         <div className="grid gap-3 sm:grid-cols-2">
           {[before, after].map((x, i) => (
             <figure key={x.id}>
-              <figcaption className="mb-1 text-sm text-muted">{i ? `Ahora (v${to})` : `Antes (v${from})`}</figcaption>
+              <figcaption className="mb-1 text-sm text-muted">{i ? `Now (v${to})` : `Before (v${from})`}</figcaption>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={fileUrl(x.pathname)} alt={i ? `Captura de la v${to}` : `Captura de la v${from}`} loading="lazy" className="w-full rounded-xl border border-line bg-white" />
+              <img src={fileUrl(x.pathname)} alt={i ? `Screenshot of v${to}` : `Screenshot of v${from}`} loading="lazy" className="w-full rounded-xl border border-line bg-white" />
             </figure>
           ))}
         </div>
@@ -255,7 +255,7 @@ function ImageDiff({ before, after, result, from, to }: { before: Asset; after: 
         <div>
           <div className="relative overflow-hidden rounded-xl border border-line bg-white">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={fileUrl(after.pathname)} alt={`Captura de la v${to}`} className="block w-full" />
+            <img src={fileUrl(after.pathname)} alt={`Screenshot of v${to}`} className="block w-full" />
             <div className="absolute inset-0 overflow-hidden" style={{ clipPath: `inset(0 ${100 - cut}% 0 0)` }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={fileUrl(before.pathname)} alt="" className="block w-full bg-white" />
@@ -269,7 +269,7 @@ function ImageDiff({ before, after, result, from, to }: { before: Asset; after: 
             value={cut}
             onChange={(e) => setCut(+e.target.value)}
             className="mt-3 w-full accent-[var(--accent)]"
-            aria-label={`Desliza para comparar la v${from} (izquierda) con la v${to} (derecha)`}
+            aria-label={`Slide to compare v${from} (left) with v${to} (right)`}
           />
           <p className="flex justify-between text-sm text-muted">
             <span>Antes (v{from})</span>

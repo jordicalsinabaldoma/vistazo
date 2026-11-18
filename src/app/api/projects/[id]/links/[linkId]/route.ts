@@ -4,11 +4,11 @@ import { handle, notFound, ok } from "@/lib/http";
 
 type Ctx = { params: Promise<{ id: string; linkId: string }> };
 
-// Revocar: el invitado pierde el acceso en su siguiente petición (también a los ficheros).
+// Revoke: the guest loses access on their next request (files included).
 export const DELETE = handle(async (req: Request, { params }: Ctx) => {
   const { id, linkId } = await params;
   const a = await access(req, id);
-  need(a, "publish"); // propietario o editor
+  need(a, "publish"); // owner or editor
   const ref = col.links().doc(linkId);
   const s = await ref.get();
   if (!s.exists || s.data()!.projectId !== id) throw notFound();

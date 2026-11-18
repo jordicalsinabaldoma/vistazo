@@ -11,7 +11,7 @@ import type { ReviewSummary } from "@/lib/revisions";
 type P = { id: string; name: string; role: string; reviewCount: number | null };
 type Item = { project: { id: string; name: string }; review: ReviewSummary; step: NextStep };
 
-const ROLE: Record<string, string> = { owner: "Propietario", editor: "Editor", reviewer: "Revisor" };
+const ROLE: Record<string, string> = { owner: "Owner", editor: "Editor", reviewer: "Reviewer" };
 
 export default function Home() {
   const [projects, setProjects] = useState<P[] | null>(null);
@@ -43,13 +43,13 @@ export default function Home() {
         {err && <div className="lg:col-span-2"><ErrorNote>{err}</ErrorNote></div>}
         <section aria-labelledby="toca">
           <h1 id="toca" className="text-2xl font-semibold tracking-tight">
-            Te toca
+            Your turn
           </h1>
-          <p className="mt-1 text-sm text-muted">Revisiones de todas tus apps en las que el siguiente paso es tuyo.</p>
+          <p className="mt-1 text-sm text-muted">Reviews across all your apps where the next step is yours.</p>
           <ul className="mt-5 grid gap-2">
             {items === null && <li className="h-20 animate-pulse rounded-xl bg-sunken" />}
             {items?.length === 0 && (
-              <li className="card px-5 py-8 text-center text-sm text-muted">Nada pendiente. Cuando alguien te pida revisar o te devuelvan feedback, aparecerá aquí.</li>
+              <li className="card px-5 py-8 text-center text-sm text-muted">Nothing pending. When someone asks you to review, or you get feedback back, it shows up here.</li>
             )}
             {items?.map(({ project, review: r, step }) => (
               <li key={r.id}>
@@ -85,35 +85,35 @@ export default function Home() {
         <section aria-labelledby="apps" className="lg:pt-1">
           <div className="flex items-end justify-between gap-4">
             <h2 id="apps" className="text-base font-semibold">
-              Tus apps
+              Your apps
             </h2>
             <button className="btn btn-sm" onClick={() => setCreating((v) => !v)} aria-expanded={creating}>
-              <Plus size={15} aria-hidden /> Nueva app
+              <Plus size={15} aria-hidden /> New app
             </button>
           </div>
           {creating && (
             <form onSubmit={create} className="card mt-4 grid gap-4 p-5">
               <div>
                 <label className="label" htmlFor="pn">
-                  Nombre
+                  Name
                 </label>
-                <input id="pn" name="name" required className="input" placeholder="App de pedidos" autoFocus />
+                <input id="pn" name="name" required className="input" placeholder="Ordering app" autoFocus />
               </div>
               <div>
                 <label className="label" htmlFor="pc">
-                  Sobre la app <span className="font-normal text-muted">(opcional)</span>
+                  About the app <span className="font-normal text-muted">(optional)</span>
                 </label>
-                <textarea id="pc" name="context" rows={3} className="input" placeholder="Qué es, para quién, qué no hay que tocar." />
-                <p className="hint">Lo verá cada revisor y entra en el prompt para tu agente.</p>
+                <textarea id="pc" name="context" rows={3} className="input" placeholder="What it is, who it is for, what not to touch." />
+                <p className="hint">Every reviewer sees it, and it goes into the prompt for your agent.</p>
               </div>
               <div>
-                <button className="btn btn-strong">Crear app</button>
+                <button className="btn btn-strong">Create app</button>
               </div>
             </form>
           )}
           <ul className="mt-4 divide-y divide-line overflow-hidden rounded-xl border border-line bg-card">
             {projects === null && <li className="h-16 animate-pulse bg-sunken" />}
-            {projects?.length === 0 && <li className="px-5 py-8 text-center text-sm text-muted">Aún no tienes apps. Crea una para publicar tu primera revisión.</li>}
+            {projects?.length === 0 && <li className="px-5 py-8 text-center text-sm text-muted">No apps yet. Create one to publish your first review.</li>}
             {projects?.map((p) => (
               <li key={p.id}>
                 <Link href={`/p/${p.id}`} className="flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-sunken/60">
@@ -121,7 +121,7 @@ export default function Home() {
                   <span className="min-w-0 flex-1">
                     <span className="block truncate font-medium">{p.name}</span>
                     <span className="block text-[13px] text-muted">
-                      {p.reviewCount != null ? plural(p.reviewCount, "revisión", "revisiones") : "Sin revisiones"} · {ROLE[p.role] ?? p.role}
+                      {p.reviewCount != null ? plural(p.reviewCount, "review", "reviews") : "No reviews"} · {ROLE[p.role] ?? p.role}
                     </span>
                   </span>
                 </Link>

@@ -53,7 +53,7 @@ const patch = z.object({
 export const PATCH = handle(async (req: Request, { params }: Ctx) => {
   const { id } = await params;
   const a = await access(req, id);
-  need(a, "publish"); // propietario o editor
+  need(a, "publish"); // owner or editor
   const b = patch.parse(await req.json());
   await col.projects().doc(id).update({
     ...(b.name ? { name: b.name } : {}),

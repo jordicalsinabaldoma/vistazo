@@ -1,7 +1,7 @@
 "use client";
 import { put } from "@vercel/blob/client";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- llamadas sin tipar en páginas antiguas
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- untyped calls in older pages
 export async function api<T = any>(path: string, init?: RequestInit & { json?: unknown }): Promise<T> {
   const res = await fetch(path, {
     ...init,
@@ -25,7 +25,7 @@ export function kindOf(type: string): "image" | "video" | "artifact" {
   return "artifact";
 }
 
-/** Sube un fichero directamente al almacén privado con un token de un solo uso. */
+/** Uploads a file straight to private storage with a single-use token. */
 export async function uploadFile(projectId: string, file: File) {
   const contentType = file.type || "application/octet-stream";
   const { pathname, clientToken } = await api<{ pathname: string; clientToken: string }>(
@@ -54,7 +54,7 @@ export async function uploadFile(projectId: string, file: File) {
 }
 
 export const fmtDate = (t: number) =>
-  new Date(t).toLocaleString("es-ES", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  new Date(t).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
 export const slug = (s: string) =>
   s

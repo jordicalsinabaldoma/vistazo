@@ -16,7 +16,7 @@ export function Logo({ href = "/" }: { href?: string }) {
   );
 }
 
-/** Barra superior: marca, migas de pan (children) y sesión. */
+/** Top bar: brand, breadcrumbs (children) and session. */
 export default function TopBar({ children }: { children?: React.ReactNode }) {
   const [me, setMe] = useState<Me | null>(null);
   useEffect(() => {
@@ -26,7 +26,7 @@ export default function TopBar({ children }: { children?: React.ReactNode }) {
     <header className="sticky top-0 z-30 border-b border-line bg-paper/90 backdrop-blur supports-[backdrop-filter]:bg-paper/80">
       <div className="mx-auto flex h-14 max-w-[1440px] items-center gap-3 px-4">
         <Logo href={me?.user ? "/app" : "/"} />
-        <nav aria-label="Ruta" className="flex min-w-0 flex-1 items-center gap-1.5 truncate text-sm text-muted">
+        <nav aria-label="Breadcrumb" className="flex min-w-0 flex-1 items-center gap-1.5 truncate text-sm text-muted">
           {children}
         </nav>
         {me?.user ? (
@@ -39,14 +39,14 @@ export default function TopBar({ children }: { children?: React.ReactNode }) {
                 location.href = "/";
               }}
             >
-              Salir
+              Sign out
             </button>
           </div>
         ) : me?.guest ? (
-          <span className="chip bg-neutral text-ink">Invitado: {me.guest.name}</span>
+          <span className="chip bg-neutral text-ink">Guest: {me.guest.name}</span>
         ) : me ? (
           <Link href="/" className="btn btn-sm">
-            Entrar
+            Sign in
           </Link>
         ) : null}
       </div>

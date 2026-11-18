@@ -1,5 +1,5 @@
-# PLANTILLA (inactiva: renómbrala a .yml en TU repo solo cuando lo autorices).
-# Publica una revisión en Vistazo cuando una PR lleva la etiqueta "visual-review".
+# TEMPLATE (inactive: rename it to .yml in YOUR repo only once you have approved it).
+# Publishes a review to Vistazo when a PR has the "visual-review" label.
 name: vistazo-publish
 on:
   pull_request:
@@ -12,14 +12,14 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
-      # 1) Tu paso de preview (web: deploy de preview; nativo: OTA por rama) → exporta PREVIEW_URL
-      # 2) Tu paso de capturas (web: npx vistazo publish --capture; nativo: runner → ./capturas)
-      - name: Publicar en Vistazo
+      # 1) Your preview step (web: preview deploy; native: OTA per branch) → exports PREVIEW_URL
+      # 2) Your screenshot step (web: npx vistazo publish --capture; native: runner → ./screenshots)
+      - name: Publish to Vistazo
         env:
           VISTAZO_URL: ${{ secrets.VISTAZO_URL }}
           VISTAZO_PROJECT: ${{ secrets.VISTAZO_PROJECT }}
           VISTAZO_API_KEY: ${{ secrets.VISTAZO_API_KEY }}
         run: |
-          npx vistazo publish --config vistazo.config.json --assets ./capturas \
+          npx vistazo publish --config vistazo.config.json --shots ./screenshots \
             --title "PR #${{ github.event.pull_request.number }}: ${{ github.event.pull_request.title }}" \
             --qr "$PREVIEW_URL" --meta pr=${{ github.event.pull_request.number }} --meta commit=${{ github.sha }}

@@ -1,18 +1,18 @@
-// Kit de prueba: lo que quien revisa necesita a mano para probar (usuarios, códigos que
-// escanear, productos, enlaces…). Compatible tal cual con el formato «página de
-// etiquetas QR» (title / intro / pages[] / rows[] / labels[] / products[]): un JSON
-// generado para esas páginas se puede publicar sin tocarlo.
+// Test kit: what a reviewer needs at hand to test (users, codes to scan, products,
+// links…). Compatible as-is with the "QR label page" format (title / intro / pages[] /
+// rows[] / labels[] / products[]): JSON generated for those pages can be published
+// untouched.
 //
-// Reglas de presentación (vienen de probar con escáneres): en pantalla solo se ve el
-// nombre y el código; el QR aparece de uno en uno al abrir una etiqueta, para que el
-// lector nunca lea el código de al lado.
+// Display rules (learned testing with scanners): only the name and the code are shown;
+// the QR appears one at a time when a label is opened, so the scanner never reads the
+// neighbouring code.
 import { z } from "zod";
 
-/** Colores disponibles para un tipo de etiqueta (tokens en globals.css: --k-<color>). */
+/** Colours available for a label kind (tokens in globals.css: --k-<color>). */
 export const KIND_COLORS = ["orange", "green", "violet", "blue", "ink", "ochre", "grey", "red"] as const;
 export type KindColor = (typeof KIND_COLORS)[number];
 
-/** Iconos disponibles (nombres propios, se traducen a Phosphor en la interfaz). */
+/** Available icons (our own names, mapped to Phosphor in the UI). */
 export const KIND_ICONS = [
   "tag", "qr", "barcode", "user", "key", "link", "pin", "box", "package", "stack", "cart", "bag",
   "warehouse", "truck", "grid", "card", "mail", "phone", "ticket", "text", "store", "file",
@@ -27,23 +27,23 @@ export interface KindDef {
   dashed?: boolean;
 }
 
-/** Tipos por defecto, genéricos. Cada app puede añadir o redefinir los suyos. */
+/** Generic default kinds. Each app can add or redefine its own. */
 export const DEFAULT_KINDS: KindDef[] = [
-  { key: "user", name: "Usuario", color: "blue", icon: "user" },
-  { key: "password", name: "Contraseña", color: "ink", icon: "key" },
-  { key: "code", name: "Código", color: "ink", icon: "qr" },
-  { key: "product", name: "Producto", color: "violet", icon: "barcode" },
-  { key: "card", name: "Tarjeta de prueba", color: "green", icon: "card" },
-  { key: "link", name: "Enlace", color: "blue", icon: "link" },
-  { key: "location", name: "Ubicación", color: "ink", icon: "pin" },
-  { key: "text", name: "Dato", color: "grey", icon: "text" },
-  { key: "other", name: "Etiqueta", color: "grey", icon: "tag" },
+  { key: "user", name: "User", color: "blue", icon: "user" },
+  { key: "password", name: "Password", color: "ink", icon: "key" },
+  { key: "code", name: "Code", color: "ink", icon: "qr" },
+  { key: "product", name: "Product", color: "violet", icon: "barcode" },
+  { key: "card", name: "Test card", color: "green", icon: "card" },
+  { key: "link", name: "Link", color: "blue", icon: "link" },
+  { key: "location", name: "Location", color: "ink", icon: "pin" },
+  { key: "text", name: "Data", color: "grey", icon: "text" },
+  { key: "other", name: "Label", color: "grey", icon: "tag" },
 ];
 
 const str = (max: number) => z.string().trim().max(max);
 
 export const kindSchema = z.object({
-  key: z.string().trim().min(1).max(40).regex(/^[a-z0-9][a-z0-9_-]*$/i, "clave: letras, números, - y _"),
+  key: z.string().trim().min(1).max(40).regex(/^[a-z0-9][a-z0-9_-]*$/i, "key: letters, numbers, - and _"),
   name: str(60).min(1),
   color: z.enum(KIND_COLORS).default("grey"),
   icon: z.enum(KIND_ICONS).default("tag"),
@@ -66,7 +66,7 @@ const label = z.object({
   code: str(400).min(1),
   name: str(120).optional(),
   detail: str(300).optional(),
-  // No mostrar el código en claro (contraseñas): se copia igual.
+  // Do not show the code in clear (passwords): it can still be copied.
   secret: z.boolean().optional(),
   products: z.array(product).max(200).optional(),
 });
@@ -91,12 +91,12 @@ export const kitSchema = z.object({
   title: str(200).optional(),
   intro: str(2000).optional(),
   pages: z.array(page).max(100).default([]),
-  // Página externa con el kit (por ejemplo una página de etiquetas ya publicada).
+  // External page with the kit (for example a label page already published).
   url: z
     .string()
     .max(2000)
     .url()
-    .refine((u) => u.startsWith("https://"), "Tiene que ser un enlace https://")
+    .refine((u) => u.startsWith("https://"), "Must be an https:// link")
     .optional(),
 });
 
@@ -106,7 +106,7 @@ export type KitRow = KitPage["rows"][number];
 export type KitLabel = KitRow["labels"][number];
 export type KitProduct = NonNullable<KitLabel["products"]>[number];
 
-/** Cuántas etiquetas tiene un kit (para contadores). */
+/** How many labels a kit has (for counters). */
 export function kitSize(k?: TestKit | null) {
   if (!k) return 0;
   let n = 0;
@@ -114,7 +114,7 @@ export function kitSize(k?: TestKit | null) {
   return n;
 }
 
-/** Tipos efectivos de una app: los de por defecto, con los suyos encima. */
+/** Effective kinds for an app: the defaults, with its own on top. */
 export function kindsFor(custom?: KindDef[]) {
   const map = new Map(DEFAULT_KINDS.map((k) => [k.key, k]));
   for (const k of custom ?? []) map.set(k.key, k);
@@ -126,11 +126,11 @@ export function kindOf(map: Map<string, KindDef>, key: string): KindDef {
 }
 
 /**
- * Si llega una página HTML de etiquetas en vez del JSON, saca sus datos del bloque
- * <script type="application/json" id="page-data">. Lo usa la CLI.
+ * If an HTML label page arrives instead of the JSON, extract its data from the
+ * <script type="application/json" id="page-data"> block. Used by the CLI.
  */
 export function kitFromHtml(html: string): unknown {
   const m = /<script[^>]*id=["']page-data["'][^>]*>([\s\S]*?)<\/script>/i.exec(html);
-  if (!m) throw new Error("No encuentro el bloque page-data en el HTML");
+  if (!m) throw new Error("Could not find the page-data block in the HTML");
   return JSON.parse(m[1]);
 }

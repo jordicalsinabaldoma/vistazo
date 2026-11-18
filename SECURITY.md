@@ -1,38 +1,35 @@
-# Seguridad
+# Security
 
-## Avisar de un fallo
+## Reporting a vulnerability
 
-No abras una issue pública. Usa **GitHub → Security → Report a vulnerability** (aviso
-privado) en este repo. Cuenta qué has visto, cómo reproducirlo y qué alcance crees que
-tiene. Respondo en cuanto pueda; esto es un proyecto personal, sin plazos garantizados.
+Please do not open a public issue. Use **GitHub → Security → Report a vulnerability** (private report) on this repo.
+Tell me what you saw, how to reproduce it and how far you think it reaches. I will answer as soon as I can; this is a
+personal project with no guaranteed response times.
 
-Interesa especialmente:
-- Saltarse permisos: un invitado que ve otra revisión, un revisor que aprueba lo suyo,
-  una clave de agente que comenta o aprueba.
-- Inyección en el prompt: un comentario que consiga salir del bloque de datos o colarse
-  sin el aviso de «parece una instrucción».
-- XSS o lectura de ficheros privados (capturas, vídeos) sin acceso.
+Especially interesting:
+- Bypassing permissions: a guest who sees another review, a reviewer who approves their own work, an agent key that
+  comments or approves.
+- Prompt injection: a comment that manages to break out of the data block or slip through without the "looks like an
+  instruction" warning.
+- XSS or reading private files (screenshots, videos) without access.
 
-## Cómo está pensado
+## How it is designed
 
-- Ningún secreto en el repo: todo va en variables de entorno (ver `.env.example`).
-  El servidor no arranca sin `SESSION_SECRET` (≥ 32 caracteres) y sin credenciales de BD.
-- Contraseñas con scrypt. Sesión JWT en cookie `httpOnly`, `secure` en producción y `SameSite=Lax`.
-- Enlaces de invitado y claves de agente: solo se guarda el hash; el secreto se ve una vez
-  y se revoca al momento (también corta capturas y vídeos, que se sirven con control de acceso).
-- Los comentarios son datos de terceros. El prompt para el agente los aísla (ver README,
-  «Seguridad») y hay tests que lo comprueban (`npm test`).
-- Los enlaces que publica un agente no admiten `javascript:`, `data:` ni `file:`; los QR se
-  generan en el navegador.
+- No secrets in the repo: everything goes in environment variables (see `.env.example`). The server will not start
+  without `SESSION_SECRET` (≥ 32 characters) and database credentials.
+- Passwords with scrypt. JWT session in an `httpOnly` cookie, `secure` in production and `SameSite=Lax`.
+- Guest links and agent keys: only the hash is stored; the secret is shown once and can be revoked at once (which also
+  cuts off screenshots and videos, served with access control).
+- Comments are third-party data. The prompt for the agent isolates them (see README, "Security") and tests check it
+  (`npm test`).
+- Links published by an agent cannot use `javascript:`, `data:` or `file:`; QR codes are generated in the browser.
+- Dependencies: `npm audit --omit=dev` shows no high or critical issues. Some moderate warnings remain in an internal
+  `firebase-admin` chain (google-gax → rimraf → glob/minimatch) that never receives user data.
 
-## Límites conocidos (antes de usarlo con datos reales)
+## Known limits (before using it with real data)
 
-- Registro abierto y sin rate limiting en login y enlaces.
-- Sin correo: no hay recuperación de contraseña.
-- Los adjuntos no caducan.
+- Open sign-up and no rate limiting on login and links.
+- No email: no password recovery.
+- Attachments do not expire.
 
-- Dependencias: `npm audit --omit=dev` sin avisos altos ni críticos. Quedan avisos moderados
-  en una cadena interna de `firebase-admin` (google-gax → rimraf → glob/minimatch) que no
-  recibe datos de usuarios.
-
-Detalle en `docs/PENDIENTE.md`.
+Details in `docs/LIMITATIONS.md`.

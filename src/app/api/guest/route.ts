@@ -5,16 +5,16 @@ import { forbidden, handle, notFound, ok } from "@/lib/http";
 import type { Project, Review, ShareLink } from "@/lib/model";
 import { ensureMigrated, summarizeReviews } from "@/lib/revisions";
 
-// Entrada de invitado: /s/<linkId>.<secreto>. Solo se guarda el hash del secreto.
+// Guest entry: /s/<linkId>.<secret>. Only the secret's hash is stored.
 const schema = z.object({ token: z.string().min(10).max(200), name: z.string().trim().min(1).max(60).optional() });
 
 async function resolve(token: string) {
   const [id, secret] = token.split(".");
   const snap = id ? await col.links().doc(id).get() : null;
   const link = snap?.exists ? (snap.data() as ShareLink) : null;
-  if (!link || link.tokenHash !== sha256(secret ?? "")) throw notFound("Enlace no válido");
-  if (link.revoked) throw forbidden("Este enlace se ha revocado");
-  if (link.expiresAt && link.expiresAt < Date.now()) throw forbidden("Este enlace ha caducado");
+  if (!link || link.tokenHash !== sha256(secret ?? "")) throw notFound("Invalid link");
+  if (link.revoked) throw forbidden("This link has been revoked");
+  if (link.expiresAt && link.expiresAt < Date.now()) throw forbidden("This link has expired");
   return link;
 }
 
@@ -39,6 +39,6 @@ export const GET = handle(async (req: Request) => {
 export const POST = handle(async (req: Request) => {
   const b = schema.parse(await req.json());
   const link = await resolve(b.token);
-  await startGuest(link, b.name || "Invitado");
+  await startGuest(link, b.name || "Guest");
   return ok({ projectId: link.projectId, revisionId: (await landing(link)).revisionId });
 });

@@ -1,12 +1,12 @@
 @import "tailwindcss";
 
 /*
- * Sistema visual de Vistazo (ver DESIGN.md).
- * Colores como tokens con modo claro y oscuro (sigue al sistema). Contraste AA
- * comprobado: texto secundario ≥ 5:1, bordes de campos ≥ 3:1, botón principal ≥ 5:1.
- * El color solo significa algo: naranja = acción principal y pines; ámbar = te toca
- * corregir; verde = aprobado; rojo = falla o peligro. Todo lo demás es neutro.
- * Radios: controles 8px, superficies 12px, etiquetas y pines redondos.
+ * Vistazo visual system (see DESIGN.md).
+ * Colors are tokens with light and dark mode (follows the OS). AA contrast checked:
+ * secondary text >= 5:1, field borders >= 3:1, primary button >= 5:1.
+ * Color always means something: orange = primary action and pins; amber = your turn
+ * to fix; green = approved; red = failure or danger. Everything else is neutral.
+ * Radii: controls 8px, surfaces 12px, chips and pins fully round.
  */
 :root {
   --paper: #f6f6f7;
@@ -30,7 +30,7 @@
   --infobg: #e0ecff;
   --neutral: #e9e9ec;
   --shadow: 18 19 23;
-  /* Tipos de etiqueta del kit de prueba */
+  /* Test kit label kinds */
   --k-orange: #c2410c;
   --k-green: #2f6b55;
   --k-violet: #5b4fc4;
@@ -127,11 +127,11 @@ a {
   .btn {
     @apply inline-flex min-h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-field/60 bg-card px-3 text-sm font-medium whitespace-nowrap text-ink transition-[background-color,border-color,transform] duration-150 select-none hover:border-ink/50 active:translate-y-px disabled:pointer-events-none disabled:opacity-50;
   }
-  /* Acción principal: una por pantalla. */
+  /* Primary action: one per screen. */
   .btn-primary {
     @apply border-accent bg-accent text-on-accent hover:border-accent hover:brightness-110;
   }
-  /* Acción fuerte dentro de una herramienta (no compite con la principal). */
+  /* Strong action inside a tool (does not compete with the primary one). */
   .btn-strong {
     @apply border-ink bg-ink text-paper hover:border-ink hover:bg-ink/85;
   }
@@ -170,7 +170,7 @@ a {
   .segmented > [aria-current="page"] {
     @apply bg-card text-ink shadow-[0_1px_2px_rgb(var(--shadow)/0.12)];
   }
-  /* Pin numerado sobre capturas y web en vivo. Área táctil de 40px con ::after. */
+  /* Numbered pin on screenshots and live web. 40px hit area via ::after. */
   .pin {
     @apply absolute flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-white bg-accent text-xs font-bold text-on-accent shadow-[0_2px_6px_rgb(0_0_0/0.35)];
   }
@@ -185,7 +185,7 @@ a {
   .section-title {
     @apply text-base font-semibold text-ink;
   }
-  /* Pestañas subrayadas (como las de una PR). */
+  /* Underlined tabs (like a pull request). */
   .tabs {
     @apply flex items-end gap-1 overflow-x-auto text-sm;
     scrollbar-width: none;
@@ -201,7 +201,7 @@ a {
   .count {
     @apply inline-flex min-w-5 items-center justify-center rounded-full bg-neutral px-1.5 text-xs leading-5 font-semibold text-ink tabular-nums;
   }
-  /* Caja con cabecera, como los comentarios de una PR. */
+  /* Box with a header, like pull request comments. */
   .box {
     @apply overflow-hidden rounded-xl border border-line bg-card;
   }

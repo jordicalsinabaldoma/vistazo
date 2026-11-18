@@ -18,11 +18,11 @@ type Data = {
   me: { id?: string; role: string; can: Record<string, boolean> };
 };
 
-const ROLE: Record<string, string> = { owner: "Propietario", editor: "Editor", reviewer: "Revisor" };
+const ROLE: Record<string, string> = { owner: "Owner", editor: "Editor", reviewer: "Reviewer" };
 
 type Tab = "reviews" | "activity" | "settings";
-const HASH: Record<Tab, string> = { reviews: "", activity: "#actividad", settings: "#ajustes" };
-const PLATFORM: Record<string, string> = { web: "Web", mobile: "App móvil", desktop: "Escritorio", other: "Otra" };
+const HASH: Record<Tab, string> = { reviews: "", activity: "#activity", settings: "#settings" };
+const PLATFORM: Record<string, string> = { web: "Web", mobile: "Mobile app", desktop: "Desktop", other: "Other" };
 
 export default function AppPage() {
   const { id } = useParams<{ id: string }>();
@@ -37,8 +37,8 @@ export default function AppPage() {
     [id],
   );
   useEffect(() => {
-    // La pestaña sale del hash al cargar (en el servidor no hay hash: así no se desajusta al hidratar).
-    load().then(() => setTab(location.hash === "#ajustes" ? "settings" : location.hash === "#actividad" ? "activity" : "reviews"));
+    // The tab comes from the hash after loading (the server has no hash, so hydration doesn't mismatch).
+    load().then(() => setTab(["#settings", "#ajustes"].includes(location.hash) ? "settings" : ["#activity", "#actividad"].includes(location.hash) ? "activity" : "reviews"));
   }, [load]);
 
   if (err)
@@ -77,25 +77,25 @@ export default function AppPage() {
                   {d.project.context && <p className="mt-2 line-clamp-2 max-w-[72ch] text-[15px] text-muted">{d.project.context}</p>}
                 </div>
                 {d.me.can.publish && (
-                  <Link href={`/p/${id}/nueva`} className="btn btn-primary min-h-10">
-                    <Plus size={16} weight="bold" aria-hidden /> Nueva revisión
+                  <Link href={`/p/${id}/new`} className="btn btn-primary min-h-10">
+                    <Plus size={16} weight="bold" aria-hidden /> New review
                   </Link>
                 )}
               </div>
               <dl className="mt-5 flex flex-wrap gap-x-6 gap-y-2 text-sm">
-                <Stat n={open} label={open === 1 ? "abierta" : "abiertas"} />
-                <Stat n={waiting} label="sin revisar" />
-                <Stat n={changes} label="con cambios" tone="text-warn" />
-                <Stat n={approved} label={approved === 1 ? "aprobada" : "aprobadas"} tone="text-ok" />
+                <Stat n={open} label="open" />
+                <Stat n={waiting} label="not reviewed" />
+                <Stat n={changes} label="need changes" tone="text-warn" />
+                <Stat n={approved} label="approved" tone="text-ok" />
               </dl>
             </>
           )}
-          <nav className="tabs mt-4" role="tablist" aria-label="Secciones de la app">
+          <nav className="tabs mt-4" role="tablist" aria-label="App sections">
             {(
               [
-                ["reviews", "Revisiones", <GitPullRequest key="r" size={17} aria-hidden />, open],
-                ["activity", "Actividad", <Pulse key="a" size={17} aria-hidden />, null],
-                ["settings", "Ajustes", <GearSix key="s" size={17} aria-hidden />, null],
+                ["reviews", "Reviews", <GitPullRequest key="r" size={17} aria-hidden />, open],
+                ["activity", "Activity", <Pulse key="a" size={17} aria-hidden />, null],
+                ["settings", "Settings", <GearSix key="s" size={17} aria-hidden />, null],
               ] as const
             ).map(([k, l, icon, n]) => (
               <button
@@ -156,14 +156,14 @@ function Reviews({ d }: { d: Data }) {
   );
 
   return (
-    <section aria-label="Revisiones">
+    <section aria-label="Reviews">
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <div className="relative min-w-0 flex-1 sm:max-w-sm">
           <MagnifyingGlass size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted" aria-hidden />
-          <input className="input pl-9" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar por título, rama o persona" aria-label="Buscar revisiones" />
+          <input className="input pl-9" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by title, branch or person" aria-label="Search reviews" />
         </div>
         <button className={`btn ${mine ? "border-accent bg-accent-soft text-accent-ink" : ""}`} aria-pressed={mine} onClick={() => setMine((v) => !v)}>
-          Me tocan
+          My turn
         </button>
       </div>
       <div className="box">
@@ -171,7 +171,7 @@ function Reviews({ d }: { d: Data }) {
           {(["open", "closed"] as const).map((k) => (
             <button key={k} onClick={() => setShow(k)} aria-pressed={show === k} className={`inline-flex items-center gap-1.5 font-medium ${show === k ? "text-ink" : "text-muted hover:text-ink"}`}>
               {k === "open" ? <GitPullRequest size={16} aria-hidden /> : <LockSimple size={16} aria-hidden />}
-              {k === "open" ? "Abiertas" : "Cerradas"} <span className="tabular">{counts[k]}</span>
+              {k === "open" ? "Open" : "Closed"} <span className="tabular">{counts[k]}</span>
             </button>
           ))}
         </div>
@@ -179,14 +179,14 @@ function Reviews({ d }: { d: Data }) {
           {list.length === 0 && (
             <li className="px-5 py-12 text-center text-sm text-muted">
               {d.reviews.length === 0
-                ? "Aún no hay revisiones. Publica una desde tu agente (vistazo publish) o con «Nueva revisión»."
+                ? "No reviews yet. Publish one from your agent (vistazo publish) or with \"New review\"."
                 : mine
-                  ? "Nada te toca aquí ahora mismo."
+                  ? "Nothing is waiting on you here right now."
                   : needle
-                    ? "Nada coincide con la búsqueda."
+                    ? "Nothing matches your search."
                     : show === "open"
-                      ? "No hay revisiones abiertas."
-                      : "No hay revisiones cerradas."}
+                      ? "No open reviews."
+                      : "No closed reviews."}
             </li>
           )}
           {list.map((r) => (
@@ -223,7 +223,7 @@ function Reviews({ d }: { d: Data }) {
               </div>
               <div className="hidden shrink-0 items-center gap-4 text-[13px] text-muted sm:flex">
                 {r.toTest > 0 && (
-                  <span className="inline-flex items-center gap-1 tabular" title="Pruebas que funcionan en la última versión">
+                  <span className="inline-flex items-center gap-1 tabular" title="Tests that pass in the latest version">
                     <ListChecks size={16} aria-hidden /> {r.tested}/{r.toTest}
                   </span>
                 )}
@@ -241,10 +241,10 @@ function Reviews({ d }: { d: Data }) {
                   </span>
                 )}
                 {r.open > 0 && (
-                  <span className="inline-flex items-center gap-1" title="Comentarios abiertos">
+                  <span className="inline-flex items-center gap-1" title="Open comments">
                     <ChatCircle size={16} aria-hidden />
                     <span className="tabular">{r.open}</span>
-                    <span className="sr-only">comentarios abiertos</span>
+                    <span className="sr-only">open comments</span>
                   </span>
                 )}
               </div>
@@ -273,13 +273,13 @@ type Act = {
   text?: string;
 };
 const ACT: Record<Act["type"], string> = {
-  published: "publicó",
-  approve: "aprobó",
-  changes: "pidió cambios en",
-  comment: "terminó su revisión de",
-  commented: "comentó en",
-  resolved: "resolvió un comentario de",
-  closed: "cerró",
+  published: "published",
+  approve: "approved",
+  changes: "requested changes on",
+  comment: "finished reviewing",
+  commented: "commented on",
+  resolved: "resolved a comment on",
+  closed: "closed",
 };
 
 function ActivityFeed({ pid }: { pid: string }) {
@@ -292,11 +292,11 @@ function ActivityFeed({ pid }: { pid: string }) {
   }, [pid]);
   if (err) return <ErrorNote>{err}</ErrorNote>;
   if (!list) return <div className="h-40 animate-pulse rounded-xl bg-sunken" />;
-  if (!list.length) return <p className="py-12 text-center text-sm text-muted">Todavía no ha pasado nada.</p>;
-  // Agrupado por día, lo último arriba.
+  if (!list.length) return <p className="py-12 text-center text-sm text-muted">Nothing has happened yet.</p>;
+  // Grouped by day, newest first.
   const days = new Map<string, Act[]>();
   for (const a of list) {
-    const k = new Date(a.at).toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" });
+    const k = new Date(a.at).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
     days.set(k, [...(days.get(k) ?? []), a]);
   }
   return (
@@ -311,7 +311,7 @@ function ActivityFeed({ pid }: { pid: string }) {
                 <div className="min-w-0 flex-1">
                   <p>
                     <b className="font-semibold">{a.who.name}</b> <span className="text-muted">{ACT[a.type]}</span>{" "}
-                    {a.type === "published" || a.type === "approve" || a.type === "changes" || a.type === "comment" ? <span className="text-muted">la v{a.version} de </span> : null}
+                    {a.type === "published" || a.type === "approve" || a.type === "changes" || a.type === "comment" ? <span className="text-muted">v{a.version} of </span> : null}
                     <Link href={`/r/${a.revisionId}`} className="font-medium hover:underline">
                       #{a.review.number} {a.review.title}
                     </Link>
@@ -330,7 +330,7 @@ function ActivityFeed({ pid }: { pid: string }) {
   );
 }
 
-// ---------- Ajustes: todo lo que no es revisar, en segundo plano ----------
+// ---------- Settings: everything that is not reviewing, kept in the background ----------
 
 type Link_ = { id: string; label: string; revoked: boolean; active: boolean; createdAt: number; expiresAt?: number; review: { number: number; title: string } | null };
 type Key = { id: string; label: string; prefix: string; revoked: boolean; createdAt: number };
@@ -372,7 +372,7 @@ function Settings({ d, reload }: { d: Data; reload: () => void }) {
   async function save() {
     await run(async () => {
       await api(`/api/projects/${pid}`, { method: "PATCH", json: { context, platform, kinds: kinds.filter((k) => k.key.trim() && k.name.trim()), checklist: items.filter((i) => i.title.trim()) } });
-      setSaved("Guardado");
+      setSaved("Saved");
       reload();
       setTimeout(() => setSaved(""), 2000);
     });
@@ -387,20 +387,20 @@ function Settings({ d, reload }: { d: Data; reload: () => void }) {
       <ErrorNote>{msg}</ErrorNote>
       <section className="card p-5" aria-labelledby="s-about">
         <h2 id="s-about" className="section-title">
-          Sobre la app
+          About the app
         </h2>
-        <p className="hint">Lo ve cada revisor y entra en el prompt para tu agente. Qué es, para quién, qué no hay que tocar.</p>
+        <p className="hint">Every reviewer sees it, and it goes into the prompt for your agent. What it is, who it is for, what not to touch.</p>
         <textarea className="input mt-3" rows={6} value={context} disabled={!can} onChange={(e) => setContext(e.target.value)} aria-labelledby="s-about" />
 
-        <h2 className="section-title mt-8">Cómo se prueba</h2>
-        <p className="hint">Cambia las palabras y lo que se ofrece al revisar: en una app móvil, «En el móvil» con el QR de Expo, deep link o descarga.</p>
-        <div className="segmented mt-3" role="radiogroup" aria-label="Plataforma">
+        <h2 className="section-title mt-8">How it’s tested</h2>
+        <p className="hint">Changes the wording and what reviewers get: for a mobile app, “On mobile” with an Expo QR, deep link or download.</p>
+        <div className="segmented mt-3" role="radiogroup" aria-label="Platform">
           {(
             [
               ["web", "Web"],
-              ["mobile", "App móvil"],
-              ["desktop", "Escritorio"],
-              ["other", "Otra"],
+              ["mobile", "Mobile app"],
+              ["desktop", "Desktop"],
+              ["other", "Other"],
             ] as const
           ).map(([k, l]) => (
             <button key={k} role="radio" aria-checked={platform === k} aria-selected={platform === k} disabled={!can} onClick={() => setPlatform(k)}>
@@ -409,10 +409,10 @@ function Settings({ d, reload }: { d: Data; reload: () => void }) {
           ))}
         </div>
 
-        <h2 className="section-title mt-8">Tipos de dato del kit de prueba</h2>
+        <h2 className="section-title mt-8">Test data types</h2>
         <p className="hint">
-          Los de por defecto ({DEFAULT_KINDS.map((k) => k.name.toLowerCase()).join(", ")}) sirven para casi todo. Añade los tuyos para que el kit hable como tu app: palé, mesa, paciente… También
-          pueden venir del vistazo.json del repo.
+          The defaults ({DEFAULT_KINDS.map((k) => k.name.toLowerCase()).join(", ")}) cover almost everything. Add your own so the kit speaks your app’s
+          language: pallet, table, patient… They can also come from the repo’s vistazo.json.
         </p>
         <ul className="mt-3 grid gap-2">
           {kinds.map((k, i) => {
@@ -422,21 +422,21 @@ function Settings({ d, reload }: { d: Data; reload: () => void }) {
                 <span className="kind flex h-9 w-9 items-center justify-center rounded-lg bg-sunken" style={{ ["--k" as string]: `var(--k-${k.color})` }}>
                   <KindIcon icon={k.icon} />
                 </span>
-                <input className="input font-mono text-[13px]" value={k.key} disabled={!can} onChange={(e) => up({ key: e.target.value })} placeholder="clave" aria-label={`Clave ${i + 1}`} />
-                <input className="input" value={k.name} disabled={!can} onChange={(e) => up({ name: e.target.value })} placeholder="Nombre visible" aria-label={`Nombre ${i + 1}`} />
+                <input className="input font-mono text-[13px]" value={k.key} disabled={!can} onChange={(e) => up({ key: e.target.value })} placeholder="key" aria-label={`Key ${i + 1}`} />
+                <input className="input" value={k.name} disabled={!can} onChange={(e) => up({ name: e.target.value })} placeholder="Display name" aria-label={`Name ${i + 1}`} />
                 <select className="input" value={k.color} disabled={!can} onChange={(e) => up({ color: e.target.value as KindDef["color"] })} aria-label={`Color ${i + 1}`}>
                   {KIND_COLORS.map((c) => (
                     <option key={c}>{c}</option>
                   ))}
                 </select>
-                <select className="input" value={k.icon} disabled={!can} onChange={(e) => up({ icon: e.target.value as KindDef["icon"] })} aria-label={`Icono ${i + 1}`}>
+                <select className="input" value={k.icon} disabled={!can} onChange={(e) => up({ icon: e.target.value as KindDef["icon"] })} aria-label={`Icon ${i + 1}`}>
                   {KIND_ICONS.map((c) => (
                     <option key={c}>{c}</option>
                   ))}
                 </select>
                 {can && (
                   <button className="btn btn-danger" onClick={() => setKinds(kinds.filter((_, j) => j !== i))}>
-                    Quitar
+                    Remove
                   </button>
                 )}
               </li>
@@ -445,12 +445,12 @@ function Settings({ d, reload }: { d: Data; reload: () => void }) {
         </ul>
         {can && (
           <button className="btn btn-sm mt-2" onClick={() => setKinds([...kinds, { key: "", name: "", color: "blue", icon: "tag" }])}>
-            <Plus size={14} aria-hidden /> Añadir tipo
+            <Plus size={14} aria-hidden /> Add type
           </button>
         )}
 
-        <h2 className="section-title mt-8">Flujos críticos</h2>
-        <p className="hint">Lo que hay que probar en todas las revisiones de esta app. Cada revisión añade lo suyo.</p>
+        <h2 className="section-title mt-8">Critical flows</h2>
+        <p className="hint">What to test in every review of this app. Each review adds its own.</p>
         <ul className="mt-3 grid gap-2">
           {items.map((it, i) => (
             <li key={i} className="flex gap-2">
@@ -458,12 +458,12 @@ function Settings({ d, reload }: { d: Data; reload: () => void }) {
                 className="input"
                 value={it.title}
                 disabled={!can}
-                aria-label={`Flujo crítico ${i + 1}`}
+                aria-label={`Critical flow ${i + 1}`}
                 onChange={(e) => setItems(items.map((x, j) => (j === i ? { ...x, title: e.target.value } : x)))}
               />
               {can && (
-                <button className="btn btn-danger" onClick={() => setItems(items.filter((_, j) => j !== i))} aria-label={`Quitar flujo ${i + 1}`}>
-                  Quitar
+                <button className="btn btn-danger" onClick={() => setItems(items.filter((_, j) => j !== i))} aria-label={`Remove flow ${i + 1}`}>
+                  Remove
                 </button>
               )}
             </li>
@@ -472,10 +472,10 @@ function Settings({ d, reload }: { d: Data; reload: () => void }) {
         {can && (
           <div className="mt-4 flex flex-wrap items-center gap-3">
             <button className="btn btn-sm" onClick={() => setItems([...items, { title: "" }])}>
-              <Plus size={14} aria-hidden /> Añadir flujo
+              <Plus size={14} aria-hidden /> Add flow
             </button>
             <button className="btn btn-strong btn-sm" onClick={save}>
-              Guardar cambios
+              Save changes
             </button>
             <span className="text-sm text-ok" aria-live="polite">
               {saved}
@@ -487,9 +487,9 @@ function Settings({ d, reload }: { d: Data; reload: () => void }) {
       {d.me.can.manage && (
         <section className="card p-5" aria-labelledby="s-members">
           <h2 id="s-members" className="section-title">
-            Personas con cuenta
+            People with an account
           </h2>
-          <p className="hint">Solo ellas pueden aprobar o pedir cambios. Editor: publica, edita y resuelve. Revisor: prueba, comenta y aprueba.</p>
+          <p className="hint">Only they can approve or request changes. Editor: publishes, edits and resolves. Reviewer: tests, comments and approves.</p>
           <ul className="mt-3 divide-y divide-line text-sm">
             {d.members.map((m) => (
               <li key={m.id} className="flex flex-wrap items-center gap-3 py-2.5">
@@ -502,7 +502,7 @@ function Settings({ d, reload }: { d: Data; reload: () => void }) {
                     className="btn btn-danger btn-sm"
                     onClick={() => run(async () => (await api(`/api/projects/${pid}/members?userId=${m.id}`, { method: "DELETE" }), reload()))}
                   >
-                    Quitar
+                    Remove
                   </button>
                 )}
               </li>
@@ -521,12 +521,12 @@ function Settings({ d, reload }: { d: Data; reload: () => void }) {
               });
             }}
           >
-            <input name="email" type="email" required placeholder="Correo de su cuenta" aria-label="Correo" className="input max-w-xs" />
-            <select name="role" className="input w-auto" aria-label="Papel">
-              <option value="reviewer">Revisor</option>
+            <input name="email" type="email" required placeholder="Their account email" aria-label="Email" className="input max-w-xs" />
+            <select name="role" className="input w-auto" aria-label="Role">
+              <option value="reviewer">Reviewer</option>
               <option value="editor">Editor</option>
             </select>
-            <button className="btn">Añadir</button>
+            <button className="btn">Add</button>
           </form>
         </section>
       )}
@@ -534,26 +534,26 @@ function Settings({ d, reload }: { d: Data; reload: () => void }) {
       {d.me.can.publish && (
         <section className="card p-5" aria-labelledby="s-links">
           <h2 id="s-links" className="section-title">
-            Enlaces de invitado
+            Guest links
           </h2>
-          <p className="hint">Se crean desde cada revisión con «Compartir» y solo abren esa revisión. Revocar corta el acceso al momento, también a capturas y vídeos.</p>
+          <p className="hint">They are created from each review with “Share” and only open that review. Revoking cuts access right away, screenshots and videos included.</p>
           <ul className="mt-3 divide-y divide-line text-sm">
-            {visibleLinks.length === 0 && <li className="py-3 text-muted">No hay enlaces activos.</li>}
+            {visibleLinks.length === 0 && <li className="py-3 text-muted">No active links.</li>}
             {visibleLinks.map((l) => (
               <li key={l.id} className="flex flex-wrap items-center gap-3 py-2.5">
                 <span className="min-w-0 flex-1">
                   {l.label}
                   <span className="block text-[13px] text-muted">
-                    {l.review ? `#${l.review.number} ${l.review.title}` : "Toda la app (enlace antiguo)"}
-                    {l.expiresAt ? `, caduca ${fmtDate(l.expiresAt)}` : ""}
+                    {l.review ? `#${l.review.number} ${l.review.title}` : "The whole app (old link)"}
+                    {l.expiresAt ? `, expires ${fmtDate(l.expiresAt)}` : ""}
                   </span>
                 </span>
                 {active(l) ? (
                   <button className="btn btn-danger btn-sm" onClick={() => run(async () => (await api(`/api/projects/${pid}/links/${l.id}`, { method: "DELETE" }), loadAccess()))}>
-                    Revocar
+                    Revoke
                   </button>
                 ) : (
-                  <span className="chip bg-neutral text-muted">{l.revoked ? "Revocado" : "Caducado"}</span>
+                  <span className="chip bg-neutral text-muted">{l.revoked ? "Revoked" : "Expired"}</span>
                 )}
               </li>
             ))}
@@ -564,12 +564,12 @@ function Settings({ d, reload }: { d: Data; reload: () => void }) {
       {d.me.can.manage && (
         <section className="card p-5" aria-labelledby="s-keys">
           <h2 id="s-keys" className="section-title">
-            Claves para tu agente
+            Keys for your agent
           </h2>
-          <p className="hint">Para la CLI y el MCP. Solo publican versiones y leen el feedback de esta app: no comentan, no resuelven, no aprueban.</p>
+          <p className="hint">For the CLI and MCP. They only publish versions and read this app’s feedback: they don’t comment, resolve or approve.</p>
           {secret && (
             <div className="mt-3 rounded-lg border border-accent/50 bg-sunken p-3">
-              <p className="text-sm font-medium">Cópiala ahora. No se vuelve a mostrar.</p>
+              <p className="text-sm font-medium">Copy it now. It won’t be shown again.</p>
               <code data-testid="secret" className="mt-2 block break-all font-mono text-xs">
                 {secret}
               </code>
@@ -579,17 +579,17 @@ function Settings({ d, reload }: { d: Data; reload: () => void }) {
             </div>
           )}
           <ul className="mt-3 divide-y divide-line text-sm">
-            {visibleKeys.length === 0 && <li className="py-3 text-muted">No hay claves activas.</li>}
+            {visibleKeys.length === 0 && <li className="py-3 text-muted">No active keys.</li>}
             {visibleKeys.map((k) => (
               <li key={k.id} className="flex flex-wrap items-center gap-3 py-2.5">
                 <span className="min-w-0 flex-1">
                   {k.label} <code className="font-mono text-xs text-muted">{k.prefix}…</code>
                 </span>
                 {k.revoked ? (
-                  <span className="chip bg-neutral text-muted">Revocada</span>
+                  <span className="chip bg-neutral text-muted">Revoked</span>
                 ) : (
                   <button className="btn btn-danger btn-sm" onClick={() => run(async () => (await api(`/api/projects/${pid}/keys/${k.id}`, { method: "DELETE" }), loadAccess()))}>
-                    Revocar
+                    Revoke
                   </button>
                 )}
               </li>
@@ -607,28 +607,28 @@ function Settings({ d, reload }: { d: Data; reload: () => void }) {
               });
             }}
           >
-            <input name="label" required placeholder="Por ejemplo: Claude Code del portátil" aria-label="Nombre de la clave" className="input max-w-xs" />
-            <button className="btn">Crear clave</button>
+            <input name="label" required placeholder="For example: Claude Code on my laptop" aria-label="Key name" className="input max-w-xs" />
+            <button className="btn">Create key</button>
           </form>
-          <h3 className="mt-6 text-sm font-semibold">Conectar tu repo</h3>
-          <p className="hint">Un vistazo.json en la raíz del repo (sin secretos) y la clave en una variable de entorno. La skill de Vistazo enseña al agente a publicar con capturas, kit de prueba y QR.</p>
+          <h3 className="mt-6 text-sm font-semibold">Connect your repo</h3>
+          <p className="hint">A vistazo.json at the repo root (no secrets) and the key in an environment variable. The Vistazo skill teaches your agent to publish with screenshots, a test kit and QR codes.</p>
           <pre className="mt-2 overflow-x-auto rounded-lg bg-sunken p-3 font-mono text-xs leading-relaxed text-ink">{`// vistazo.json
 {
   "url": "${typeof location !== "undefined" ? location.origin : ""}",
   "project": "${pid}",
   "platform": "${platform}",
   "kit": ".vistazo/kit.json",
-  "kinds": [{ "key": "pallet", "name": "Palé", "color": "orange", "icon": "stack" }]
+  "kinds": [{ "key": "pallet", "name": "Pallet", "color": "orange", "icon": "stack" }]
 }`}</pre>
-          <pre className="mt-2 overflow-x-auto rounded-lg bg-sunken p-3 font-mono text-xs leading-relaxed text-ink">{`export VISTAZO_API_KEY=vzk_…            # nunca en el repo
-vistazo publish --capture --title "…"   # la rama actual decide la revisión
-vistazo publish --shots ./capturas --qr "exp+miapp://expo-development-client/?url=…"
-vistazo feedback                        # feedback de la revisión de tu rama`}</pre>
+          <pre className="mt-2 overflow-x-auto rounded-lg bg-sunken p-3 font-mono text-xs leading-relaxed text-ink">{`export VISTAZO_API_KEY=vzk_…            # never in the repo
+vistazo publish --capture --title "…"   # the current branch picks the review
+vistazo publish --shots ./screenshots --qr "exp+miapp://expo-development-client/?url=…"
+vistazo feedback                        # feedback for your branch's review`}</pre>
         </section>
       )}
       {hidden > 0 && (
         <button className="btn btn-quiet btn-sm justify-self-start text-muted" onClick={() => setShowRevoked((v) => !v)}>
-          {showRevoked ? "Ocultar revocados y caducados" : `Mostrar ${plural(hidden, "revocado o caducado", "revocados o caducados")}`}
+          {showRevoked ? "Hide revoked and expired" : `Show ${plural(hidden, "revoked or expired item", "revoked or expired items")}`}
         </button>
       )}
     </div>

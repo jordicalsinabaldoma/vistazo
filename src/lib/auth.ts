@@ -11,7 +11,7 @@ const GUEST = "vz_guest";
 
 function secret() {
   const s = process.env.SESSION_SECRET;
-  if (!s || s.length < 32) throw new Error("SESSION_SECRET ausente o corto");
+  if (!s || s.length < 32) throw new Error("SESSION_SECRET missing or too short");
   return new TextEncoder().encode(s);
 }
 
@@ -65,12 +65,12 @@ export async function startGuest(link: ShareLink, name: string) {
   const gid = randomToken(9);
   (await cookies()).set(
     GUEST,
-    await sign({ lid: link.id, pid: link.projectId, name: clean(name, 60) || "Invitado", gid }, 7),
+    await sign({ lid: link.id, pid: link.projectId, name: clean(name, 60) || "Guest", gid }, 7),
     cookieOpts(7),
   );
 }
 
-// ----- Actores -----
+// ----- Actors -----
 export type Actor =
   | { kind: "user"; user: User }
   | { kind: "guest"; linkId: string; projectId: string; name: string; gid: string; reviewId?: string }
@@ -90,13 +90,13 @@ export async function currentGuest() {
   if (!g) return null;
   const ls = await col.links().doc(g.lid).get();
   const link = ls.exists ? (ls.data() as ShareLink) : null;
-  // Revocar el enlace corta el acceso al instante: se comprueba en cada petición.
+  // Revoking the link cuts access instantly: it is checked on every request.
   if (!link || link.revoked || (link.expiresAt && link.expiresAt < Date.now())) return null;
   return { linkId: g.lid, projectId: g.pid, name: g.name, gid: g.gid, reviewId: link.reviewId };
 }
 
 export async function actorFor(req: Request): Promise<Actor[]> {
-  // Devuelve todas las identidades presentes; el permiso se decide por proyecto.
+  // Returns every identity present; permission is decided per project.
   const authz = req.headers.get("authorization");
   if (authz?.startsWith("Bearer vzk_")) {
     const raw = authz.slice(7).trim();
@@ -104,7 +104,7 @@ export async function actorFor(req: Request): Promise<Actor[]> {
     const snap = id ? await col.keys().doc(id).get() : null;
     const key = snap?.exists ? (snap.data() as ApiKey) : null;
     if (!key || key.revoked || key.keyHash !== sha256(raw))
-      throw unauthorized("Clave de API no válida o revocada");
+      throw unauthorized("Invalid or revoked API key");
     return [{ kind: "apikey", key }];
   }
   const out: Actor[] = [];
@@ -120,7 +120,7 @@ export interface Access {
   actor: Actor;
   role: Role | "guest" | "agent";
   author: Author;
-  /** Si existe, el actor (un invitado) solo puede ver esa revisión. */
+  /** If set, the actor (a guest) can only see that review. */
   scope?: string;
   can: {
     view: boolean;
@@ -134,7 +134,7 @@ export interface Access {
 
 export async function getProject(projectId: string) {
   const snap = await col.projects().doc(projectId).get();
-  if (!snap.exists) throw notFound("Proyecto no encontrado");
+  if (!snap.exists) throw notFound("Project not found");
   return snap.data() as Project;
 }
 
@@ -154,7 +154,7 @@ export async function access(req: Request, projectId: string): Promise<Access> {
           comment: true,
           publish: role !== "reviewer",
           resolve: role !== "reviewer",
-          approve: true, // aprobar = usuario identificado y miembro (salvo el autor de la revisión: ver verdict)
+          approve: true, // approve = signed-in member (except the review's author: see verdict)
           manage: role === "owner",
         },
       };
@@ -179,23 +179,23 @@ export async function access(req: Request, projectId: string): Promise<Access> {
         can: { view: true, comment: true, publish: false, resolve: false, approve: false, manage: false },
       };
   }
-  if (actors.some((a) => a.kind === "user")) throw forbidden("No eres miembro de este proyecto");
+  if (actors.some((a) => a.kind === "user")) throw forbidden("You are not a member of this project");
   throw unauthorized();
 }
 
 const MSG: Record<string, string> = {
-  approve: "Solo un usuario identificado y miembro de la app puede aprobar o pedir cambios",
-  resolve: "Solo el equipo autor puede resolver comentarios",
-  publish: "Sin permiso para publicar ni editar revisiones",
-  manage: "Solo el propietario puede cambiar esto",
-  comment: "Sin permiso para comentar",
+  approve: "Only a signed-in member of the app can approve or request changes",
+  resolve: "Only the authoring team can resolve comments",
+  publish: "You can't publish or edit reviews",
+  manage: "Only the owner can change this",
+  comment: "You can't comment",
 };
 
 export function need(a: Access, what: keyof Access["can"]) {
-  if (!a.can[what]) throw forbidden(MSG[what] ?? "Sin acceso");
+  if (!a.can[what]) throw forbidden(MSG[what] ?? "No access");
 }
 
-/** Un invitado con enlace de revisión solo ve esa revisión. */
+/** A guest with a review link only sees that review. */
 export function needScope(a: Access, reviewId: string) {
-  if (a.scope && a.scope !== reviewId) throw forbidden("Tu enlace es de otra revisión");
+  if (a.scope && a.scope !== reviewId) throw forbidden("Your link is for another review");
 }

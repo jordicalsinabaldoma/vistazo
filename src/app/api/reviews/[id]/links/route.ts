@@ -22,7 +22,7 @@ export const GET = handle(async (req: Request, { params }: Ctx) => {
 
 const schema = z.object({ label: z.string().trim().min(1).max(80), days: z.number().int().min(1).max(90).optional() });
 
-// Enlace de invitado que SOLO abre esta revisión. El secreto se muestra una vez.
+// Guest link that ONLY opens this review. The secret is shown once.
 export const POST = handle(async (req: Request, { params }: Ctx) => {
   const { id } = await params;
   const { a, review } = await reviewAccess(req, id);

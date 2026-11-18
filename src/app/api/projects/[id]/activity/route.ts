@@ -16,7 +16,7 @@ export type Activity = {
   text?: string;
 };
 
-/** Lo último que ha pasado en la app: versiones, veredictos, comentarios y cierres. */
+/** What happened lately in the app: versions, verdicts, comments and closings. */
 export const GET = handle(async (req: Request, { params }: Ctx) => {
   const { id } = await params;
   await ensureMigrated(id);

@@ -1,47 +1,47 @@
 #!/usr/bin/env node
-// vistazo — publica revisiones visuales desde tu agente y recoge el feedback.
+// vistazo: publish visual reviews from your agent and collect the feedback.
 import { readFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { parseArgs } from "node:util";
 import { capture, client, env, fromDir, gitBranch, latestRevision, loadConfig, loadKit, prForBranch, publish } from "../lib/core.mjs";
 
-const HELP = `vistazo — revisión visual para quien programa con agentes
+const HELP = `vistazo: visual review for people who build with agents
 
-Variables: VISTAZO_API_KEY (clave de agente de la app; nunca en el repo).
-URL y app salen de VISTAZO_URL / VISTAZO_PROJECT o de vistazo.json en la raíz del repo:
-  { "url": "https://…", "project": "…", "platform": "web|mobile", "kit": "ruta o https://…",
+Variables: VISTAZO_API_KEY (the app's agent key; never in the repo).
+URL and app come from VISTAZO_URL / VISTAZO_PROJECT or from vistazo.json at the repo root:
+  { "url": "https://…", "project": "…", "platform": "web|mobile", "kit": "path or https://…",
     "open": [{ "kind": "qr", "label": "Expo", "url": "exp+app://…" }],
-    "kinds": [{ "key": "pallet", "name": "Palé", "color": "orange", "icon": "stack" }],
-    "baseUrl": "…", "flows": [ … recorridos para --capture … ] }
+    "kinds": [{ "key": "pallet", "name": "Pallet", "color": "orange", "icon": "stack" }],
+    "baseUrl": "…", "flows": [ … flows for --capture … ] }
 
   vistazo capture  --config vistazo.config.json [--live-url URL] [--out dir]
-      Recorre los flujos con Playwright en TU máquina y deja capturas + vídeo + manifest.json.
-      Revisa, borra o reordena lo que quieras antes de publicar.
+      Walks the flows with Playwright on YOUR machine and leaves screenshots + video +
+      manifest.json. Review, delete or reorder anything before publishing.
 
   vistazo publish  --title "…" [--summary "…" | --summary-file f.md] [--live-url URL]
-                   [--config vistazo.config.json] [--capture | --assets dir]
-                   [--branch rama | --review id] [--pr URL] [--test-data "…"]
-                   [--kit kit.json|etiquetas.html|https://…] [--shots dir]
+                   [--config vistazo.config.json] [--capture | --shots dir]
+                   [--branch name | --review id] [--pr URL] [--test-data "…"]
+                   [--kit kit.json|labels.html|https://…]
                    [--qr URL [--qr-label "…"]] [--deeplink URL] [--download URL]
-                   [--meta clave=valor]...
-      Publica una versión. Va a la revisión abierta de la rama actual de git (o la
-      crea); --review la manda a una revisión concreta. --capture recorre los flujos
-      antes; --assets publica una carpeta ya hecha (manual, simulador, Appium,
-      Maestro…: <recorrido>__<paso>.png; --shots es lo mismo). --kit adjunta el kit
-      de prueba (formato de página de etiquetas: su JSON o la página HTML entera).
-      --qr / --deeplink / --download: cómo abrir la versión en un móvil (QR de Expo
-      o Metro, enlace de EAS Update, TestFlight, APK…). Los comentarios abiertos de esa revisión
-      pasan solos a la versión nueva. Sin --pr, si tienes gh, se enlaza la PR de la
-      rama (solo se lee; no se sincroniza ningún estado).
+                   [--meta key=value]...
+      Publishes a version. It goes to the open review for the current git branch (or
+      creates one); --review sends it to a specific review. --capture walks the flows
+      first; --shots publishes an existing folder (by hand, simulator, Appium,
+      Maestro…: <flow>__<step>.png; --assets is the same). --kit attaches the test kit
+      (QR label page format: its JSON or the whole HTML page). --qr / --deeplink /
+      --download: how to open the version on a phone (Expo or Metro QR, EAS Update
+      link, TestFlight, APK…). The review's open comments carry over to the new
+      version on their own. Without --pr, if you have gh, the branch's PR is linked
+      (read only; no state is synced).
 
-  vistazo feedback [<idVersión>] [--json]
-      Prompt para tu agente (por defecto) o JSON, de la revisión de tu rama. Los
-      comentarios que parecen instrucciones para un agente se apartan; revísalos en
-      la web. El resumen para personas solo está en la web.
+  vistazo feedback [<versionId>] [--json]
+      Prompt for your agent (default) or JSON, for your branch's review. Comments that
+      look like instructions for an agent are set aside; review them on the web. The
+      summary for people is only on the web.
 
-  vistazo reviews          Lista las revisiones de la app.
-  vistazo mcp              Servidor MCP por stdio (para Claude Code, Cursor…).
+  vistazo reviews          Lists the app's reviews.
+  vistazo mcp              MCP server over stdio (for Claude Code, Cursor…).
 `;
 
 const { values: o, positionals } = parseArgs({
@@ -93,15 +93,15 @@ async function main() {
   }
 
   const api = client(e);
-  if (!project) throw new Error("Falta VISTAZO_PROJECT");
+  if (!project) throw new Error("Missing VISTAZO_PROJECT");
 
   if (cmd === "publish") {
-    if (!o.title) throw new Error("Falta --title");
+    if (!o.title) throw new Error("Missing --title");
     let flows = [];
     let origin = "playwright";
     if (o.capture) {
       const out = o.out || path.join(os.tmpdir(), `vistazo-${Date.now()}`);
-      log(`Capturando ${baseUrl} …`);
+      log(`Capturing ${baseUrl} …`);
       flows = await capture(cfg, { baseUrl, outDir: out, log });
     } else if (o.assets || o.shots) {
       flows = await fromDir(o.assets || o.shots, cfg);
@@ -110,9 +110,9 @@ async function main() {
     const summary = o["summary-file"] ? await readFile(o["summary-file"], "utf8") : o.summary || "";
     const previews = [
       ...(cfg.open || []),
-      ...(o.qr ? [{ kind: "qr", label: o["qr-label"] || "Abrir en el móvil", url: o.qr }] : []),
+      ...(o.qr ? [{ kind: "qr", label: o["qr-label"] || "Open on your phone", url: o.qr }] : []),
       ...(o.deeplink ? [{ kind: "deeplink", label: "Deep link", url: o.deeplink }] : []),
-      ...(o.download ? [{ kind: "download", label: "Descargar la app", url: o.download }] : []),
+      ...(o.download ? [{ kind: "download", label: "Download the app", url: o.download }] : []),
     ];
     const testKit = await loadKit(o.kit || cfg.kit, o.kit ? process.cwd() : cfg._dir);
     const platform = o.platform || cfg.platform;
@@ -123,12 +123,12 @@ async function main() {
       ? { id: o.review }
       : { branch, prUrl: o.pr || prForBranch(), testData: o["test-data"], testKit };
     if (o.review && testKit) review.testKit = testKit;
-    if (branch && !meta.rama) meta.rama = branch;
+    if (branch && !meta.branch) meta.branch = branch;
     const r = await publish(api, project, { title: o.title, summary, liveUrl: baseUrl, previews, meta, flows, origin, review, app, log });
     log(
       r.review.created
-        ? `✓ Revisión nueva #${r.review.number} «${r.review.title}» con su v1`
-        : `✓ v${r.number} en la revisión #${r.review.number}${r.carried ? ` (${r.carried} comentario(s) abiertos siguen en esta versión)` : ""}`,
+        ? `✓ New review #${r.review.number} "${r.review.title}" with its v1`
+        : `✓ v${r.number} in review #${r.review.number}${r.carried ? ` (${r.carried} open comment(s) carried over to this version)` : ""}`,
     );
     return console.log(r.url);
   }
@@ -136,7 +136,7 @@ async function main() {
   if (cmd === "feedback") {
     const id = !arg || arg === "latest" ? await latestRevision(api, project, o.branch || gitBranch()) : arg;
     const fb = await api.get(`/api/revisions/${id}/feedback`);
-    if (fb.flagged?.length) log(`⚠ ${fb.flagged.length} comentario(s) apartado(s) por parecer instrucciones para un agente. Revísalos en la web.`);
+    if (fb.flagged?.length) log(`⚠ ${fb.flagged.length} comment(s) set aside because they look like instructions for an agent. Review them on the web.`);
     return console.log(o.json ? JSON.stringify(fb.json, null, 2) : fb.prompt);
   }
 

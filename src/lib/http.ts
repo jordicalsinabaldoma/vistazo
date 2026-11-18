@@ -16,14 +16,14 @@ export function handle<A extends unknown[]>(fn: (...args: A) => Promise<Response
     } catch (e) {
       if (e instanceof HttpError) return NextResponse.json({ error: e.message }, { status: e.status });
       if (e instanceof ZodError)
-        return NextResponse.json({ error: "Datos no válidos", issues: e.issues }, { status: 400 });
+        return NextResponse.json({ error: "Invalid data", issues: e.issues }, { status: 400 });
       console.error(e);
-      return NextResponse.json({ error: "Error interno" }, { status: 500 });
+      return NextResponse.json({ error: "Internal error" }, { status: 500 });
     }
   };
 }
 
 export const bad = (m: string) => new HttpError(400, m);
-export const unauthorized = (m = "Inicia sesión") => new HttpError(401, m);
-export const forbidden = (m = "Sin acceso") => new HttpError(403, m);
-export const notFound = (m = "No existe") => new HttpError(404, m);
+export const unauthorized = (m = "Please sign in") => new HttpError(401, m);
+export const forbidden = (m = "No access") => new HttpError(403, m);
+export const notFound = (m = "Not found") => new HttpError(404, m);

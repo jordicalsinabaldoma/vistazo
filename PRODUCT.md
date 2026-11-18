@@ -1,60 +1,54 @@
-# Vistazo: producto
+# Vistazo: product
 
-La pull request visual de tu app. Para quien programa con agentes (vibe coding) y para
-quien revisa lo que ve (diseño, producto, cliente).
+The visual pull request for your app. For people who build with agents (vibe coding) and for people who review what
+they see (design, product, clients).
 
-## Modelo
+## Model
 
-**App → Revisión → Versión**, como repositorio → pull request → commits.
+**App → Review → Version**, like repository → pull request → commits.
 
-- **App**: un proyecto (web o app). Guarda lo permanente: qué es la app, sus flujos
-  críticos, quién tiene cuenta, enlaces de invitado y claves del agente. Todo eso vive
-  en «Ajustes», en segundo plano.
-- **Revisión**: un cambio o feature con su propósito. Título, qué cambia, qué probar,
-  datos de prueba, rama y, opcionalmente, un enlace a la PR (solo un enlace: no se
-  sincroniza estado). Los comentarios pertenecen a la revisión.
-- **Versión**: cada vuelta tras corregir con el feedback (v1, v2…). Capturas por pasos,
-  enlace en vivo, resultados de lo probado y veredictos. Los comentarios abiertos pasan
-  solos a la versión siguiente de la misma revisión; el diff compara con la anterior de
-  la misma revisión.
+- **App**: a project (site or app). It holds what is permanent: what the app is, its critical flows, who has an
+  account, guest links and agent keys. All of that lives in "Settings", in the background.
+- **Review**: a change or feature with its purpose. Title, what changes, what to test, test data, branch and,
+  optionally, a link to the PR (only a link: no state is synced). Comments belong to the review.
+- **Version**: each round after fixing things from the feedback (v1, v2…). Screenshots per step, live link, check
+  results and verdicts. Open comments carry over on their own to the next version of the same review; the diff compares
+  with the previous version of the same review.
 
-## La revisión, en tres pestañas
+## A review, in three tabs
 
-- **Resumen**: qué cambia, qué probar y toda la conversación en orden. Una sola caja para comentar, al final.
-- **Revisar**: lo importante. Capturas, la app en vivo o en el móvil (QR), o lo que cambió. Al lado, comentarios,
-  kit de prueba y pruebas. Para comentar algo concreto se toca la captura o la web: sin formularios a la vista.
-- **Versiones**: cada vuelta, con quién la publicó y qué dijo cada revisor.
+- **Overview**: what changes, what to test and the whole conversation in order. A single comment box, at the end.
+- **Review**: the main one. Screenshots, the app live or on mobile (QR), or what changed. On the side, comments, test
+  kit and checks. To comment on something specific you click the screenshot or the site: no forms in sight.
+- **Versions**: each round, with who published it and what each reviewer said.
 
-El **kit de prueba** son los datos para probar (usuarios, códigos, productos…), cada uno con su QR de uno en uno.
-Es agnóstico: los tipos de dato los define cada app, y acepta el formato de las páginas de etiquetas QR.
+The **test kit** is the data needed to test (users, codes, products…), each with its own QR, one at a time. It is
+agnostic: each app defines its data types, and it accepts the QR label page format.
 
-## El circuito
+## The loop
 
-Publicar → Revisar → Corregir → Aprobar. El estado se calcula (no se marca a mano):
-Pendiente de revisar / Con comentarios / Cambios pedidos / Aprobada / Cerrada.
+Publish → Review → Fix → Approve. The state is computed (never set by hand):
+Pending review / With comments / Changes requested / Approved / Closed.
 
-- **Una acción principal por pantalla**, según quién mira y en qué estado está:
-  autor sin revisores: Compartir; con comentarios o cambios pedidos: Llevar el feedback
-  a tu agente; aprobada: Cerrar. Quien revisa: Empezar a revisar, o Revisar lo que ha
-  cambiado si hay versión nueva.
-- **El estado guía, no limita.** Todo lo demás sigue a mano. Solo bloquean los permisos:
-  el autor no aprueba lo suyo, los invitados no aprueban, el agente no comenta.
-- **Terminar revisión** cierra el turno de quien revisa: Aprobar, Pedir cambios o Solo
-  comentar (invitados: Enviar comentarios). Una versión nueva deja sin efecto la
-  aprobación anterior. Aprobar con notas abiertas se permite, con aviso, y el estado lo
-  dice: «Aprobada, 2 notas abiertas».
+- **One main action per screen**, depending on who is looking and the state:
+  author with no reviewers: Share; with comments or changes requested: Feedback for your agent; approved: Close.
+  Reviewer: Start reviewing, or Review what changed if there is a new version.
+- **The state guides, it does not block.** Everything else stays at hand. Only permissions block: authors cannot
+  approve their own work, guests cannot approve, the agent cannot comment.
+- **Finish review** ends the reviewer's turn: Approve, Request changes or Comment only (guests: Send comments). A new
+  version cancels the previous approval. Approving with open notes is allowed, with a warning, and the state says so:
+  "Approved, 2 open notes".
 
-## Quién usa qué
+## Who does what
 
-- Autor: publica (agente o formulario), comparte, se lleva el feedback, publica otra versión.
-- Revisor con cuenta: prueba, comenta, aprueba o pide cambios.
-- Invitado: entra con un enlace que solo abre una revisión; prueba y comenta.
-- Agente: clave por app; publica versiones y lee el feedback. Nada más.
+- Author: publishes (agent or form), shares, takes the feedback, publishes another version.
+- Reviewer with an account: tests, comments, approves or requests changes.
+- Guest: comes in with a link that opens a single review; tests and comments.
+- Agent: one key per app; publishes versions and reads feedback. Nothing else.
 
-## Principios
+## Principles
 
-- Producto agnóstico: cualquier web o app (móviles: capturas + QR de Expo/Metro, EAS Update, deep link o descarga).
-  Nada atado a un cliente: lo específico de cada equipo vive en su `vistazo.json` y en sus tipos de dato.
-- Lenguaje llano, sin jerga. En español.
-- Los comentarios son datos de terceros: el prompt para el agente los aísla (ver README,
-  «Seguridad del feedback»).
+- Agnostic product: any site or app (mobile: screenshots + Expo/Metro QR, EAS Update, deep link or download).
+  Nothing tied to one customer: what is specific to each team lives in its `vistazo.json` and its data types.
+- Plain language, no jargon. In English.
+- Comments are third-party data: the prompt for the agent isolates them (see README, "Security").

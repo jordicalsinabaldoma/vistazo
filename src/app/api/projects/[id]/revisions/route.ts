@@ -6,7 +6,7 @@ import { ensureMigrated, publishRevision, publishSchema } from "@/lib/revisions"
 
 type Ctx = { params: Promise<{ id: string }> };
 
-// Todas las versiones de la app (compatibilidad con CLIs anteriores).
+// All versions of the app (compatibility with older CLIs).
 export const GET = handle(async (req: Request, { params }: Ctx) => {
   const { id } = await params;
   await ensureMigrated(id);
@@ -20,7 +20,7 @@ export const GET = handle(async (req: Request, { params }: Ctx) => {
   return ok({ revisions });
 });
 
-// Misma ruta para el agente (Authorization: Bearer vzk_…) y para el formulario (cookie).
+// Same route for the agent (Authorization: Bearer vzk_…) and the form (cookie).
 export const POST = handle(async (req: Request, { params }: Ctx) => {
   const { id } = await params;
   const a = await access(req, id);

@@ -5,7 +5,7 @@ import type { Review, ShareLink } from "@/lib/model";
 
 type Ctx = { params: Promise<{ id: string }> };
 
-// Todos los enlaces de invitado de la app (se crean desde cada revisión).
+// All guest links of the app (they are created from each review).
 export const GET = handle(async (req: Request, { params }: Ctx) => {
   const { id } = await params;
   const a = await access(req, id);

@@ -12,7 +12,7 @@ export default function FlowsView({ ctx, initialFlow }: { ctx: Ctx; initialFlow?
     return f ? `${f.key}/${f.steps[0]?.key ?? ""}` : "";
   });
   if (!revision.flows.length)
-    return <p className="rounded-xl border border-dashed border-line p-8 text-center text-muted">Esta versión no trae capturas. Ábrela en «En vivo» o «En el móvil».</p>;
+    return <p className="rounded-xl border border-dashed border-line p-8 text-center text-muted">This version has no screenshots. Open it in &quot;Live&quot; or &quot;On mobile&quot;.</p>;
 
   const [fk, sk] = sel.split("/");
   const flow = revision.flows.find((f) => f.key === fk) ?? revision.flows[0];
@@ -24,7 +24,7 @@ export default function FlowsView({ ctx, initialFlow }: { ctx: Ctx; initialFlow?
 
   return (
     <div className="grid gap-6 lg:grid-cols-[230px_minmax(0,1fr)]">
-      <nav className="grid content-start gap-5 text-sm lg:sticky lg:top-[4.5rem]" aria-label="Pantallas">
+      <nav className="grid content-start gap-5 text-sm lg:sticky lg:top-[4.5rem]" aria-label="Screens">
         {revision.flows.map((f) => (
           <div key={f.key}>
             <p className="font-semibold">{f.title}</p>
@@ -43,7 +43,7 @@ export default function FlowsView({ ctx, initialFlow }: { ctx: Ctx; initialFlow?
                       <span className="w-4 text-xs text-muted tabular">{i + 1}</span>
                       <span className="flex-1 truncate">{s.title}</span>
                       {n > 0 && (
-                        <span className="chip bg-accent text-on-accent" aria-label={`${n} comentarios abiertos`}>
+                        <span className="chip bg-accent text-on-accent" aria-label={`${n} open comments`}>
                           {n}
                         </span>
                       )}
@@ -65,7 +65,7 @@ function StepView({ ctx, flowKey, step }: { ctx: Ctx; flowKey: string; step: Ste
   const [body, setBody] = useState("");
   const here = (c: Comment) => "stepKey" in c.anchor && c.anchor.flowKey === flowKey && c.anchor.stepKey === step.key;
   const ids = new Set(step.assets.map((a) => a.id));
-  // Comentarios de este paso hechos sobre capturas de versiones anteriores (arrastrados).
+  // Comments on this screen made on screenshots of earlier versions (carried over).
   const carried = ctx.data.comments.filter(
     (c) => here(c) && c.anchor.type === "asset" && !ids.has(c.anchor.assetId),
   );
@@ -83,18 +83,18 @@ function StepView({ ctx, flowKey, step }: { ctx: Ctx; flowKey: string; step: Ste
           <AssetViewer key={a.id} ctx={ctx} asset={a} flowKey={flowKey} stepKey={step.key} stepTitle={step.title} />
         ))}
       </div>
-      {!step.assets.length && <p className="rounded-xl border border-dashed border-line p-6 text-sm text-muted">Esta pantalla no trae captura. Pruébala en «En vivo» o «En el móvil».</p>}
+      {!step.assets.length && <p className="rounded-xl border border-dashed border-line p-6 text-sm text-muted">This screen has no screenshot. Try it in &quot;Live&quot; or &quot;On mobile&quot;.</p>}
 
       {carried.length > 0 && (
         <div className="mt-4 rounded-xl bg-warnbg p-3 text-sm">
-          <p className="font-medium text-warn">Siguen abiertos de versiones anteriores en este paso</p>
+          <p className="font-medium text-warn">Still open from earlier versions on this screen</p>
           <ul className="mt-2 grid gap-2">
             {carried.map((c) => {
               const a = c.anchor as Extract<typeof c.anchor, { type: "asset" }>;
               return (
                 <li key={c.id} className="flex gap-3">
                   {a.pathname && (
-                    <a href={fileUrl(a.pathname)} target="_blank" rel="noopener noreferrer" className="relative block h-16 w-24 shrink-0 overflow-hidden rounded-lg border border-line bg-card" aria-label={`Captura original del comentario ${ctx.numberOf(c)}`}>
+                    <a href={fileUrl(a.pathname)} target="_blank" rel="noopener noreferrer" className="relative block h-16 w-24 shrink-0 overflow-hidden rounded-lg border border-line bg-card" aria-label={`Original screenshot for comment ${ctx.numberOf(c)}`}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={fileUrl(a.pathname)} alt="" className="h-full w-full object-cover object-top" />
                       <span className="pin !h-4 !w-4 !border" style={{ left: `${a.x * 100}%`, top: `${a.y * 100}%` }} />
@@ -127,14 +127,14 @@ function StepView({ ctx, flowKey, step }: { ctx: Ctx; flowKey: string; step: Ste
                 setWriting(false);
               }}
             >
-              <input autoFocus className="input" value={body} onChange={(e) => setBody(e.target.value)} placeholder="Comentario sobre la pantalla entera" aria-label="Comentario sobre la pantalla" />
+              <input autoFocus className="input" value={body} onChange={(e) => setBody(e.target.value)} placeholder="Comment on the whole screen" aria-label="Comment on the screen" />
               <button className="btn btn-strong" disabled={!body.trim()}>
-                Comentar
+                Comment
               </button>
             </form>
           ) : (
             <button className="btn btn-quiet btn-sm mt-2 -ml-2 text-muted" onClick={() => setWriting(true)}>
-              Comentar la pantalla entera
+              Comment on the whole screen
             </button>
           ))}
       </div>

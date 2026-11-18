@@ -19,7 +19,7 @@ export const POST = handle(async (req: Request, { params }: Ctx) => {
   const { id } = await params;
   const ref = col.comments().doc(id);
   const snap = await ref.get();
-  if (!snap.exists) throw notFound("Comentario no encontrado");
+  if (!snap.exists) throw notFound("Comment not found");
   const c = snap.data() as Comment;
   const a = await access(req, c.projectId);
   if (c.reviewId) needScope(a, c.reviewId);
@@ -44,7 +44,7 @@ export const POST = handle(async (req: Request, { params }: Ctx) => {
       events: FieldValue.arrayUnion({ type: "resolved", at: now, by: a.author, revisionId: b.revisionId }),
     });
   } else {
-    // Reabrir: lo puede hacer quien resuelve y también quien revisa (no está de acuerdo).
+    // Reopen: whoever resolves can do it, and so can the reviewer (if they disagree).
     need(a, "comment");
     await ref.update({
       status: "open",

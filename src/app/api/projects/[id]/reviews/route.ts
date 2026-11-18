@@ -4,7 +4,7 @@ import { ensureMigrated, summarizeReviews } from "@/lib/revisions";
 
 type Ctx = { params: Promise<{ id: string }> };
 
-// Lista de revisiones de la app (para la CLI/MCP y para elegir dónde publicar).
+// The app's reviews (for the CLI/MCP and for choosing where to publish).
 export const GET = handle(async (req: Request, { params }: Ctx) => {
   const { id } = await params;
   await ensureMigrated(id);

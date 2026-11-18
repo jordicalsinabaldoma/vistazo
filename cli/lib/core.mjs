@@ -1,6 +1,6 @@
-// Núcleo de la CLI: cliente HTTP de Vistazo, subida de adjuntos, runner de capturas.
-// El runner corre en TU entorno (no en el backend alojado): Playwright necesita un
-// navegador real y las funciones serverless de Vercel no son sitio para eso.
+// CLI core: Vistazo HTTP client, attachment upload, screenshot runner.
+// The runner runs in YOUR environment (not on the hosted backend): Playwright needs a
+// real browser and Vercel serverless functions are not the place for that.
 import { execFileSync } from "node:child_process";
 import { readFile, readdir, stat, mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -16,8 +16,8 @@ export function env() {
 }
 
 export function client({ url, key }) {
-  if (!url) throw new Error("Falta VISTAZO_URL");
-  if (!key) throw new Error("Falta VISTAZO_API_KEY (clave de agente del proyecto; nunca la guardes en el repo)");
+  if (!url) throw new Error("Missing VISTAZO_URL");
+  if (!key) throw new Error("Missing VISTAZO_API_KEY (the app's agent key; never store it in the repo)");
   const call = async (method, p, body) => {
     const res = await fetch(url + p, {
       method,
@@ -52,10 +52,10 @@ export async function upload(api, project, file, origin = "playwright", caption)
   return { pathname, kind: kindOf(contentType), name: path.basename(file), contentType, size: buf.length, origin, caption, ...pngSize(buf) };
 }
 
-// ---------- Configuración ----------
+// ---------- Configuration ----------
 /**
- * Configuración del repo: --config, o vistazo.json / vistazo.config.json en la carpeta
- * actual o en la raíz de git. Sin secretos: la clave va en VISTAZO_API_KEY.
+ * Repo configuration: --config, or vistazo.json / vistazo.config.json in the current
+ * folder or at the git root. No secrets: the key goes in VISTAZO_API_KEY.
  */
 export async function loadConfig(file) {
   const tries = file ? [file] : ["vistazo.json", "vistazo.config.json"].flatMap((f) => [f, path.join(gitRoot() || ".", f)]);
@@ -66,7 +66,7 @@ export async function loadConfig(file) {
       cfg._dir = path.dirname(path.resolve(f));
       return cfg;
     } catch (e) {
-      if (file) throw new Error(`No puedo leer ${file}: ${e.message}`);
+      if (file) throw new Error(`Cannot read ${file}: ${e.message}`);
     }
   }
   return { flows: [], _dir: process.cwd() };
@@ -80,16 +80,16 @@ function gitRoot() {
   }
 }
 
-/** Datos de la página de etiquetas: el bloque <script id="page-data"> de su HTML. */
+/** Data of a QR label page: the <script id="page-data"> block in its HTML. */
 export function kitFromHtml(html) {
   const m = /<script[^>]*id=["']page-data["'][^>]*>([\s\S]*?)<\/script>/i.exec(html);
-  if (!m) throw new Error("No encuentro el bloque page-data en el HTML del kit");
+  if (!m) throw new Error("Cannot find the page-data block in the kit HTML");
   return JSON.parse(m[1]);
 }
 
 /**
- * Kit de prueba: un JSON (formato de página de etiquetas), la propia página HTML, o un
- * enlace https a una página ya publicada.
+ * Test kit: a JSON file (QR label page format), the HTML page itself, or an https link
+ * to an already published page.
  */
 export async function loadKit(ref, base = process.cwd()) {
   if (!ref) return undefined;
@@ -108,16 +108,16 @@ function hostAllowed(baseUrl, allow) {
 }
 
 /**
- * Recorre los flujos con Playwright y guarda capturas (y vídeo por recorrido).
- * Las acciones las escribe el agente a partir de la descripción en lenguaje natural.
+ * Walks the flows with Playwright and saves screenshots (and a video per flow).
+ * The agent writes the actions from the plain-language description.
  */
 export async function capture(cfg, { baseUrl, outDir, log = console.error }) {
-  if (!baseUrl) throw new Error("Falta baseUrl (en la config o --live-url)");
+  if (!baseUrl) throw new Error("Missing baseUrl (in the config or --live-url)");
   if (!hostAllowed(baseUrl, cfg.allowHosts))
-    throw new Error(`Host no permitido para capturar: ${new URL(baseUrl).hostname}. Revisa allowHosts (protección contra capturar entornos reales).`);
+    throw new Error(`Host not allowed for screenshots: ${new URL(baseUrl).hostname}. Check allowHosts (protects against capturing real environments).`);
   let chromium;
   try {
-    // Primero el Playwright del proyecto que se revisa; si no, el de la CLI.
+    // First the Playwright of the project under review; otherwise the CLI's own.
     let mod;
     try {
       const req = createRequire(path.join(process.cwd(), "package.json"));
@@ -127,7 +127,7 @@ export async function capture(cfg, { baseUrl, outDir, log = console.error }) {
     }
     chromium = mod.chromium ?? mod.default.chromium;
   } catch {
-    throw new Error("Playwright no está instalado en este entorno: npm i -D playwright && npx playwright install chromium");
+    throw new Error("Playwright is not installed here: npm i -D playwright && npx playwright install chromium");
   }
   await mkdir(outDir, { recursive: true });
   const browser = await chromium.launch();
@@ -140,7 +140,7 @@ export async function capture(cfg, { baseUrl, outDir, log = console.error }) {
         deviceScaleFactor: cfg.deviceScaleFactor || 1,
         isMobile: !!cfg.isMobile,
         hasTouch: !!cfg.isMobile,
-        locale: cfg.locale || "es-ES",
+        locale: cfg.locale || "en-US",
         ...(cfg.video !== false ? { recordVideo: { dir: path.join(outDir, "video"), size: viewport } } : {}),
       });
       const page = await ctx.newPage();
@@ -157,7 +157,7 @@ export async function capture(cfg, { baseUrl, outDir, log = console.error }) {
           else if (op === "waitFor") await page.locator(sub(v)).first().waitFor();
           else if (op === "wait") await page.waitForTimeout(Number(v));
           else if (op === "expectText") await page.getByText(sub(v)).first().waitFor({ timeout: 5000 });
-          else throw new Error(`Acción desconocida en ${flow.key}/${step.key}: ${op}`);
+          else throw new Error(`Unknown action in ${flow.key}/${step.key}: ${op}`);
         }
         const s = { key: step.key, title: step.title, notes: step.notes, url: page.url(), files: [] };
         if (step.capture !== false) {
@@ -178,7 +178,7 @@ export async function capture(cfg, { baseUrl, outDir, log = console.error }) {
       await ctx.close();
       if (video) {
         const vp = await video.path();
-        steps.push({ key: "video", title: "Vídeo del recorrido", notes: "Grabado por Playwright (sin audio).", files: [vp] });
+        steps.push({ key: "video", title: "Flow video", notes: "Recorded by Playwright (no audio).", files: [vp] });
       }
       result.push({ key: flow.key, title: flow.title, description: flow.description, steps });
     }
@@ -190,8 +190,8 @@ export async function capture(cfg, { baseUrl, outDir, log = console.error }) {
 }
 
 /**
- * Carpeta de capturas hechas fuera (a mano, Appium, Maestro, simulador…).
- * Convención: <recorrido>__<paso>[__n].<ext>, o un manifest.json como el que genera `capture`.
+ * Folder of screenshots taken elsewhere (by hand, Appium, Maestro, simulator…).
+ * Naming: <flow>__<step>[__n].<ext>, or a manifest.json like the one `capture` writes.
  */
 export async function fromDir(dir, cfg) {
   const names = (await readdir(dir)).sort();
@@ -204,7 +204,7 @@ export async function fromDir(dir, cfg) {
     const full = path.join(dir, n);
     if (!(await stat(full)).isFile()) continue;
     const base = n.replace(/\.[^.]+$/, "");
-    const [fk, sk = base] = base.includes("__") ? base.split("__") : ["capturas", base];
+    const [fk, sk = base] = base.includes("__") ? base.split("__") : ["screenshots", base];
     const cf = cfg.flows.find((f) => f.key === fk);
     if (!flows.has(fk)) flows.set(fk, { key: fk, title: cf?.title || fk, description: cf?.description, steps: [] });
     const f = flows.get(fk);
@@ -219,7 +219,7 @@ export async function fromDir(dir, cfg) {
   return [...flows.values()];
 }
 
-/** Rama actual de git (o undefined fuera de un repo). Solo lee. */
+/** Current git branch (or undefined outside a repo). Read only. */
 export function gitBranch(cwd = process.cwd()) {
   try {
     const b = execFileSync("git", ["rev-parse", "--abbrev-ref", "HEAD"], { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
@@ -230,8 +230,8 @@ export function gitBranch(cwd = process.cwd()) {
 }
 
 /**
- * Enlace a la PR abierta de la rama actual, si `gh` está instalado y autenticado.
- * Solo LEE (gh pr view): nunca crea ni toca PRs. Sin gh, o sin PR, devuelve undefined.
+ * Link to the open PR of the current branch, if `gh` is installed and signed in.
+ * Read ONLY (gh pr view): never creates or touches PRs. Without gh or a PR, returns undefined.
  */
 export function prForBranch(cwd = process.cwd()) {
   try {
@@ -242,7 +242,7 @@ export function prForBranch(cwd = process.cwd()) {
   }
 }
 
-/** Revisión abierta de una rama (o null). */
+/** Open review for a branch (or null). */
 export async function reviewForBranch(api, project, branch) {
   if (!branch) return null;
   const { reviews } = await api.get(`/api/projects/${project}/reviews`);
@@ -250,9 +250,9 @@ export async function reviewForBranch(api, project, branch) {
 }
 
 /**
- * Sube los ficheros y publica una versión. Misma API que el formulario.
- * `review`: { id } para una revisión concreta, o { branch, title, purpose, testData, prUrl }:
- * la versión va a la revisión abierta de esa rama, o crea una nueva.
+ * Uploads the files and publishes a version. Same API as the form.
+ * `review`: { id } for a specific review, or { branch, title, purpose, testData, testKit, prUrl }:
+ * the version goes to the open review for that branch, or creates a new one.
  */
 export async function publish(api, project, { title, summary, liveUrl, previews, meta, flows, origin, review = {}, app, log = console.error }) {
   const out = [];
@@ -272,12 +272,12 @@ export async function publish(api, project, { title, summary, liveUrl, previews,
 }
 
 /**
- * Versión de la que leer el feedback: la última de la revisión de la rama actual;
- * si no hay, la de la revisión abierta más reciente de la app.
+ * Version to read feedback from: the latest one of the current branch's review;
+ * otherwise, the one of the app's most recent open review.
  */
 export async function latestRevision(api, project, branch = gitBranch()) {
   const { reviews } = await api.get(`/api/projects/${project}/reviews`);
   const r = reviews.find((x) => x.branch === branch && x.status === "open") ?? reviews.find((x) => x.status === "open") ?? reviews[0];
-  if (!r) throw new Error("La app no tiene revisiones");
+  if (!r) throw new Error("The app has no reviews");
   return r.latestRevisionId;
 }

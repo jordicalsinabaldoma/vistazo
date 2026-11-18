@@ -32,20 +32,20 @@ export default function GuestEntry() {
           {err}
         </p>
       ) : !info ? (
-        <p className="mt-10 text-muted">Comprobando enlace…</p>
+        <p className="mt-10 text-muted">Checking link…</p>
       ) : (
         <form onSubmit={enter} className="card mt-10 p-6">
           <h1 className="text-2xl font-semibold tracking-tight text-balance">
             {info.review ? info.review.title : info.projectName}
           </h1>
-          <p className="mt-1 text-sm text-muted">Te han invitado a revisar {info.review ? `un cambio de ${info.projectName}` : info.projectName}.</p>
-          <p className="mt-4 text-sm">Puedes probarla, comentar sobre lo que veas y enviar tus comentarios. No necesitas cuenta.</p>
+          <p className="mt-1 text-sm text-muted">You’ve been invited to review {info.review ? `a change to ${info.projectName}` : info.projectName}.</p>
+          <p className="mt-4 text-sm">You can try it, comment on what you see and send your comments. No account needed.</p>
           <label className="label mt-6" htmlFor="gn">
-            Tu nombre
+            Your name
           </label>
-          <p className="hint -mt-1 mb-2">Se verá junto a tus comentarios.</p>
+          <p className="hint -mt-1 mb-2">Shown next to your comments.</p>
           <input id="gn" className="input" required value={name} onChange={(e) => setName(e.target.value)} maxLength={60} />
-          <button className="btn btn-primary mt-4 w-full">Empezar</button>
+          <button className="btn btn-primary mt-4 w-full">Start</button>
         </form>
       )}
     </main>

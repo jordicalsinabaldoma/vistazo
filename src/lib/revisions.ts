@@ -12,7 +12,7 @@ const key = z
   .string()
   .min(1)
   .max(60)
-  .regex(/^[a-z0-9][a-z0-9-_]*$/i, "clave: letras, números, - y _");
+  .regex(/^[a-z0-9][a-z0-9-_]*$/i, "key: letters, numbers, - and _");
 
 const assetIn = z.object({
   pathname: z.string().min(3).max(400),
@@ -30,7 +30,7 @@ export const httpsUrl = z
   .string()
   .max(2000)
   .url()
-  .refine((u) => u.startsWith("https://"), "Tiene que ser un enlace https://");
+  .refine((u) => u.startsWith("https://"), "Must be an https:// link");
 
 export const checklistIn = z
   .array(
@@ -57,7 +57,7 @@ export const publishSchema = z.object({
         url: z
           .string()
           .max(2000)
-          .refine((u) => !/^\s*(javascript|data|vbscript|file|blob):/i.test(u), "Ese tipo de enlace no se admite"),
+          .refine((u) => !/^\s*(javascript|data|vbscript|file|blob):/i.test(u), "That kind of link is not allowed"),
         instructions: z.string().max(2000).optional(),
       }),
     )
@@ -65,8 +65,8 @@ export const publishSchema = z.object({
     .default([]),
   meta: z.record(z.string(), z.string().max(500)).optional(),
   source: z.enum(["agent", "form"]),
-  // A qué revisión va esta versión. Sin nada: revisión nueva. Con `id`: esa revisión.
-  // Con `branch`: la revisión abierta de esa rama, o una nueva si no hay.
+  // Which review this version goes to. Nothing: a new review. With `id`: that review.
+  // With `branch`: the open review for that branch, or a new one if there is none.
   review: z
     .object({
       id: z.string().max(40).optional(),
@@ -79,8 +79,8 @@ export const publishSchema = z.object({
       testKit: kitSchema.optional(),
     })
     .default({}),
-  // Ajustes de presentación de la app que puede traer el agente desde vistazo.json.
-  // Solo cosméticos (plataforma y tipos de etiqueta): nada de permisos ni personas.
+  // App display settings the agent may bring from vistazo.json.
+  // Cosmetic only (platform and label kinds): never permissions or people.
   app: z
     .object({
       platform: z.enum(["web", "mobile", "desktop", "other"]).optional(),
@@ -111,26 +111,26 @@ export const publishSchema = z.object({
 });
 export type PublishInput = z.infer<typeof publishSchema>;
 
-/** Usuario responsable de lo que publica un actor (el agente publica en nombre de quien creó su clave). */
+/** User accountable for what an actor publishes (the agent publishes on behalf of whoever created its key). */
 async function responsible(a: Access): Promise<{ id: string; name: string }> {
   if (a.actor.kind === "user") return { id: a.actor.user.id, name: a.actor.user.name };
   if (a.actor.kind === "apikey") {
     const k: ApiKey = a.actor.key;
     const u = await col.users().doc(k.createdBy).get();
-    return { id: k.createdBy, name: u.exists ? (u.data() as User).name : "Equipo" };
+    return { id: k.createdBy, name: u.exists ? (u.data() as User).name : "Team" };
   }
-  throw bad("Sin permiso para publicar");
+  throw bad("Not allowed to publish");
 }
 
 /**
- * Datos anteriores a las revisiones: cada app tenía versiones sueltas (v1, v2…).
- * Se agrupan, una sola vez y de forma idempotente, en una revisión #1 con esas
- * versiones dentro. Se llama al leer, así un despliegue nuevo no necesita script.
+ * Data from before reviews existed: each app had loose versions (v1, v2…). They are
+ * grouped, once and idempotently, into a review #1 holding those versions. Runs on
+ * read, so a new deployment needs no migration script.
  */
 export async function ensureMigrated(projectId: string) {
   const pref = col.projects().doc(projectId);
   const snap = await pref.get();
-  if (!snap.exists) throw notFound("App no encontrada");
+  if (!snap.exists) throw notFound("App not found");
   if ((snap.data() as Project).reviewCount !== undefined) return;
 
   await db().runTransaction(async (tx) => {
@@ -182,9 +182,9 @@ export async function ensureMigrated(projectId: string) {
 }
 
 /**
- * Publica una versión. Es el ÚNICO camino: lo usan el agente (CLI/MCP con clave de
- * API) y el formulario, así el resultado es idéntico por ambas vías. Arrastra a la
- * nueva versión los comentarios abiertos DE ESA REVISIÓN (no de otras).
+ * Publishes a version. It is the ONLY path: used by the agent (CLI/MCP with an API
+ * key) and by the form, so the result is identical either way. Carries over to the
+ * new version the open comments OF THAT REVIEW (not of others).
  */
 export async function publishRevision(a: Access, input: PublishInput) {
   const projectId = a.project.id;
@@ -210,7 +210,7 @@ export async function publishRevision(a: Access, input: PublishInput) {
     let rv: Review | null = null;
     if (ri.id) {
       const s = await tx.get(col.reviews().doc(ri.id));
-      if (!s.exists || (s.data() as Review).projectId !== projectId) throw notFound("Esa revisión no existe en esta app");
+      if (!s.exists || (s.data() as Review).projectId !== projectId) throw notFound("That review does not exist in this app");
       rv = s.data() as Review;
     } else if (ri.branch) {
       const s = await tx.get(col.reviews().where("projectId", "==", projectId).where("branch", "==", ri.branch));
@@ -275,7 +275,7 @@ export async function publishRevision(a: Access, input: PublishInput) {
     return { revision: rev, review: rv!, created: isNew };
   });
 
-  // Arrastre: los comentarios abiertos de ESTA revisión siguen vigentes en la nueva versión.
+  // Carry-over: the open comments of THIS review stay in force on the new version.
   let carried = 0;
   if (!created) {
     const open = await col.comments().where("reviewId", "==", review.id).where("status", "==", "open").get();
@@ -306,7 +306,7 @@ export async function commentsFor(revisionId: string) {
   return snap.docs.map((d) => d.data() as Comment).sort((x, y) => x.createdAt - y.createdAt);
 }
 
-/** ¿Hay alguien, además del equipo autor, que pueda revisarla? */
+/** Can anyone besides the owning team review it? */
 export function isShared(project: Project, review: Review, links: ShareLink[]) {
   const now = Date.now();
   const others = Object.keys(project.members).some((uid) => uid !== review.author.id);
@@ -329,7 +329,7 @@ export interface ReviewSummary {
   open: number;
   approvals: string[];
   updatedAt: number;
-  submittedBy: string[]; // ids de quien ya terminó su revisión de la última versión
+  submittedBy: string[]; // ids of people who already finished their review of the latest version
   verdicts: { kind: Verdict["kind"]; name: string; authorKind: string }[];
   screens: number;
   tested: number;
@@ -338,7 +338,7 @@ export interface ReviewSummary {
   createdAt: number;
 }
 
-/** Resumen de las revisiones de una app (estado calculado sobre la última versión). */
+/** Summary of an app's reviews (state computed on the latest version). */
 export async function summarizeReviews(projectId: string, projectChecklist?: number): Promise<ReviewSummary[]> {
   const [rs, cs] = await Promise.all([
     col.reviews().where("projectId", "==", projectId).get(),

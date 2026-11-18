@@ -1,22 +1,24 @@
 {
-  "$comment": "Plantilla genérica para una app Expo/React Native sin target web. No hay baseUrl: las capturas llegan por --assets desde el runner nativo y la vía de prueba es un QR/deep link de la OTA de la PR. Las claves de recorrido/paso deberían coincidir con los nombres de ruta de la app para que el diff y el arrastre emparejen.",
+  "$comment": "Generic template for an Expo/React Native app with no web target. There is no baseUrl: screenshots come in through --shots from the native runner and the way to try it is a QR/deep link to the PR's OTA update. Flow/step keys should match the app's route names so the diff and carry-over line up.",
+  "platform": "mobile",
+  "kit": ".vistazo/kit.json",
   "flows": [
     {
       "key": "login",
-      "title": "Entrar con usuario de prueba",
-      "description": "Abre la app en el entorno de pruebas y entra con el usuario de prueba",
+      "title": "Sign in with a test user",
+      "description": "Open the app on the test environment and sign in with the test user",
       "steps": [
-        { "key": "Login", "title": "Pantalla de login", "notes": "testID: login-screen" },
-        { "key": "Home", "title": "Inicio tras entrar" }
+        { "key": "Login", "title": "Sign-in screen", "notes": "testID: login-screen" },
+        { "key": "Home", "title": "Home after signing in" }
       ]
     },
     {
-      "key": "flujo-critico-1",
-      "title": "Flujo crítico de ejemplo",
-      "description": "Describe aquí, en lenguaje natural, el recorrido que hay que probar en cada revisión",
+      "key": "critical-flow-1",
+      "title": "Sample critical flow",
+      "description": "Describe here, in plain language, the flow that has to be tested in every review",
       "steps": [
-        { "key": "Paso1", "title": "Primer paso" },
-        { "key": "Paso2", "title": "Segundo paso" }
+        { "key": "Step1", "title": "First step" },
+        { "key": "Step2", "title": "Second step" }
       ]
     }
   ]

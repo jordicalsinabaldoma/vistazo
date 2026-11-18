@@ -1,216 +1,210 @@
 # Vistazo
 
-**La pull request visual de tu app.** Tu agente de código publica lo que ha cambiado (capturas, la web en vivo o un QR
-para abrirla en el móvil, y los datos para probarla). Quien revisa lo prueba, comenta encima de lo que ve y lo aprueba o
-pide cambios. El feedback vuelve a tu agente como un prompt donde los comentarios van aislados como datos, nunca como
-órdenes.
+**The visual pull request for your app.** Your coding agent publishes what changed (screenshots, the live site or a QR
+code to open it on a phone, and the data needed to test it). Reviewers try it, comment right on top of what they see, and
+approve or request changes. The feedback goes back to your agent as a prompt where comments are isolated as data, never
+as instructions.
 
-> *English: Vistazo is a visual pull request for apps built with coding agents. The agent publishes screenshots, a live
-> link or a QR for mobile, plus test data; reviewers comment on what they see and approve or request changes; the
-> feedback goes back to the agent as a prompt where reviewer comments are isolated as untrusted data. The UI is in
-> Spanish. MIT licensed.*
+![Overview of a review](docs/img/overview.png)
 
-![Resumen de una revisión](docs/img/resumen.png)
+- Demo: https://vistazo-pi.vercel.app (ask for demo access) · fictional sample app: https://brasa-demo-murex.vercel.app
+- MIT license · Security: [SECURITY.md](SECURITY.md) · Contributing: [CONTRIBUTING.md](CONTRIBUTING.md)
+- The UI is in English.
 
-- Demo: https://vistazo-pi.vercel.app (pide acceso de demo) · app de ejemplo ficticia: https://brasa-demo-murex.vercel.app
-- Licencia MIT · Seguridad: [SECURITY.md](SECURITY.md) · Contribuir: [CONTRIBUTING.md](CONTRIBUTING.md)
-
-## Qué hace
+## What it does
 
 | | |
 |---|---|
-| **Revisión como una PR** | Resumen (la conversación), Revisar (capturas, en vivo o en el móvil, cambios) y Versiones (como commits). |
-| **Comentarios anclados** | Sobre un punto de una captura, de la web en vivo o de un momento de un vídeo. Siguen abiertos en la versión siguiente. |
-| **Diff visual** | Zonas que cambian entre versiones, numeradas. Oculta las pantallas iguales. |
-| **Kit de prueba** | Usuarios, códigos, productos… con su QR de uno en uno. Tipos de dato propios por app. |
-| **Apps móviles** | QR de Expo/Metro o EAS Update, deep link o descarga; capturas de simulador, Maestro o Appium. |
-| **Invitados** | Enlace que abre una sola revisión, revocable y con caducidad. Los invitados comentan; aprobar es de cuentas. |
-| **Agente** | CLI y servidor MCP: publica versiones y lee el feedback. No comenta, no aprueba, no toca git. |
-| **Feedback seguro** | Comentarios como datos en un bloque con delimitador aleatorio; lo que parece una orden se aparta. |
+| **Reviews like a PR** | Overview (the conversation), Review (screenshots, live or on mobile, changes) and Versions (like commits). |
+| **Anchored comments** | On a point of a screenshot, of the live site or of a moment in a video. They stay open in the next version. |
+| **Visual diff** | Numbered zones that changed between versions. Identical screens are hidden. |
+| **Test kit** | Users, codes, products… each with its own QR, one at a time. Each app defines its own data types. |
+| **Mobile apps** | Expo/Metro or EAS Update QR, deep link or download; screenshots from a simulator, Maestro or Appium. |
+| **Guests** | A link that opens a single review, revocable and with an expiry date. Guests comment; approving is for accounts. |
+| **Agent** | CLI and MCP server: publishes versions and reads feedback. It does not comment, approve or touch git. |
+| **Safe feedback** | Comments go as data in a block with a random delimiter; anything that looks like an order is set aside. |
 
-![Revisar con el kit de prueba](docs/img/revisar.png)
+![Review with the test kit](docs/img/review.png)
 
-![En el móvil: QR de Expo y kit](docs/img/movil.png)
+![On mobile: Expo QR and test kit](docs/img/mobile.png)
 
-## Montarlo
+## Set it up
 
-Stack: Next.js 16 en Vercel, Firestore (solo como base de datos) y Vercel Blob privado. Sin servicios de terceros más.
+Stack: Next.js 16 on Vercel, Firestore (only as a database) and private Vercel Blob. No other third-party services.
 
-1. Crea un proyecto de Firebase con Firestore y una service account con `roles/datastore.user`.
-2. Crea un almacén de Vercel Blob **privado**.
-3. Despliega en Vercel con las variables de [.env.example](.env.example): `SESSION_SECRET`,
-   `FIREBASE_SERVICE_ACCOUNT_B64` y `BLOB_READ_WRITE_TOKEN`.
-4. Entra, crea una app y, en Ajustes, una clave para tu agente. Copia `skills/vistazo/SKILL.md` a tu repo y añade un
-   `vistazo.json` (abajo).
+1. Create a Firebase project with Firestore and a service account with `roles/datastore.user`.
+2. Create a **private** Vercel Blob store.
+3. Deploy to Vercel with the variables in [.env.example](.env.example): `SESSION_SECRET`,
+   `FIREBASE_SERVICE_ACCOUNT_B64` and `BLOB_READ_WRITE_TOKEN`.
+4. Sign in, create an app and, in Settings, a key for your agent. Copy `skills/vistazo/SKILL.md` into your repo and add
+   a `vistazo.json` (see below).
 
-Para desarrollar en local sin base de datos real, mira [CONTRIBUTING.md](CONTRIBUTING.md).
+To develop locally without a real database, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
-## Circuito
+## The loop
 
-**App → Revisión → Versión**, como repositorio → pull request → commits. Detalle de producto en `PRODUCT.md`;
-sistema visual en `DESIGN.md`.
+**App → Review → Version**, like repository → pull request → commits. Product details in `PRODUCT.md`; visual system
+in `DESIGN.md`.
 
-1. **Publicar** una versión desde el agente (`vistazo publish`, CLI o MCP) o desde el formulario. Las dos vías llaman a
-   la misma API (`POST /api/projects/:id/revisions`). La versión va a la revisión abierta de la **rama** (o crea una
-   revisión nueva); con `review.id` va a una revisión concreta.
-2. **Compartir**: personas con cuenta (propietario, editor, revisor) o un enlace de invitado que **solo abre esa
-   revisión**, revocable y con caducidad.
-3. **Revisar**. Cada revisión tiene tres pestañas, como una PR:
-   - **Resumen** (la conversación): descripción, qué probar con su progreso, y en orden todo lo que pasó (versiones,
-     comentarios con sus hilos, veredictos). Al lado: siguiente paso, revisores, cómo abrir la app, kit de prueba.
-   - **Revisar** (lo importante): capturas por pantalla, la app en vivo (web) o **en el móvil** (QR de Expo/Metro, EAS
-     Update, deep link, descarga), o los cambios desde la versión anterior. Al lado: comentarios, **kit de prueba** y
-     pruebas.
-   - **Versiones** (los commits): v1, v2… con quién la publicó, qué trae, metadatos y veredictos.
-   **Terminar revisión**: Aprobar, Pedir cambios o Solo comentar (los invitados solo envían comentarios; el autor no
-   aprueba lo suyo).
-4. **Llevar el feedback a tu agente**: prompt con los comentarios aislados como datos (web, `vistazo feedback`,
-   herramienta MCP `vistazo_feedback`). Resumen markdown solo para personas.
-5. **Nueva versión**: los comentarios abiertos de esa revisión pasan solos; el diff compara con la anterior de la misma
-   revisión; la aprobación anterior deja de contar.
+1. **Publish** a version from the agent (`vistazo publish`, CLI or MCP) or from the form. Both call the same API
+   (`POST /api/projects/:id/revisions`). The version goes to the open review for the **branch** (or creates a new
+   review); with `review.id` it goes to a specific review.
+2. **Share**: people with an account (owner, editor, reviewer) or a guest link that **only opens that review**,
+   revocable and with an expiry date.
+3. **Review**. Each review has three tabs, like a PR:
+   - **Overview** (the conversation): description, what to test with its progress, and everything that happened in
+     order (versions, comment threads, verdicts). On the side: next step, reviewers, how to open the app, test kit.
+   - **Review** (the main one): screenshots per screen, the app live (web) or **on mobile** (Expo/Metro QR, EAS
+     Update, deep link, download), or the changes since the previous version. On the side: comments, **test kit** and
+     checks.
+   - **Versions** (the commits): v1, v2… with who published it, what it brings, metadata and verdicts.
+   **Finish review**: Approve, Request changes or Comment only (guests can only send comments; authors cannot approve
+   their own review).
+4. **Feedback for your agent**: a prompt with comments isolated as data (web, `vistazo feedback`, MCP tool
+   `vistazo_feedback`). The markdown summary is for people only.
+5. **New version**: the review's open comments carry over on their own; the diff compares with the previous version of
+   the same review; the previous approval no longer counts.
 
-El estado de la revisión se calcula (`src/lib/flow.ts`) y decide el botón principal de cada persona, sin bloquear
-nada más. El buzón **Te toca** (`/app`) junta lo pendiente de todas tus apps.
+The review state is computed (`src/lib/flow.ts`) and picks each person's main button, without blocking anything else.
+The **Your turn** inbox (`/app`) gathers what is pending across all your apps.
 
-## Modelo
+## Model
 
 ```
-App (colección projects: contexto, plataforma, tipos de dato del kit, flujos críticos, miembros, claves de agente)
- └─ Revisión (reviews: título, qué cambia, qué probar, kit de prueba, notas, rama, enlace a PR, estado)
-     ├─ Versión vN (revisions: inmutable salvo veredictos y checks; recorridos → pasos → adjuntos)
-     └─ Comentario (comments: ancla + revisionIds[] donde está vigente + historial de eventos)
-Enlace de invitado (shareLinks: atado a una revisión)
+App (projects collection: context, platform, test kit data types, critical flows, members, agent keys)
+ └─ Review (reviews: title, what changes, what to test, test kit, notes, branch, PR link, status)
+     ├─ Version vN (revisions: immutable except verdicts and checks; flows → steps → attachments)
+     └─ Comment (comments: anchor + revisionIds[] where it is still open + event history)
+Guest link (shareLinks: tied to one review)
 ```
 
-Los datos anteriores (versiones sueltas por app) se agrupan solos en una revisión #1 la primera vez que se leen
-(`ensureMigrated`, idempotente y en transacción): un despliegue nuevo no necesita script de migración.
+Older data (loose versions per app) is grouped on its own into a review #1 the first time it is read (`ensureMigrated`,
+idempotent and transactional): a new deployment needs no migration script.
 
-## Arquitectura
+## Architecture
 
-| Pieza | Elección | Por qué |
+| Piece | Choice | Why |
 |---|---|---|
-| Front + API | Next.js 16 (App Router, route handlers) en Vercel, región `fra1` | Decisión tomada: todo en Vercel |
-| Base de datos | Firestore (proyecto Firebase dedicado, plan Spark) vía `firebase-admin` | Decisión tomada: Firebase solo como BD |
-| Ficheros | Vercel Blob **privado**; subida directa con token de un solo fichero; lectura siempre por `/api/files/…` con control de acceso | Sin el límite de 4,5 MB del cuerpo de las funciones; revocar un enlace corta también capturas y vídeos |
-| Auth | Cuentas propias (correo + contraseña scrypt), sesión JWT en cookie httpOnly; invitado = cookie firmada atada a un enlace de revisión que se comprueba en cada petición; agente = clave `vzk_…` por app (solo se guarda su hash) | Sin dependencias externas; revocable al instante |
-| Capturas | Runner Playwright en **la máquina del agente** (`vistazo capture` / `publish --capture`) | Ver «Viabilidad» |
-| Web en vivo | iframe + capa de pines; `bridge.js` opcional en la app para anclar a elementos | Funciona con cualquier web que se deje enmarcar |
+| Front + API | Next.js 16 (App Router, route handlers) on Vercel, region `fra1` | Everything on Vercel |
+| Database | Firestore (dedicated Firebase project, Spark plan) via `firebase-admin` | Firebase only as a database |
+| Files | **Private** Vercel Blob; direct upload with a single-file token; always read through `/api/files/…` with access control | No 4.5 MB function body limit; revoking a link also cuts off screenshots and videos |
+| Auth | Own accounts (email + scrypt password), JWT session in an httpOnly cookie; guest = signed cookie tied to a review link and checked on every request; agent = `vzk_…` key per app (only its hash is stored) | No external dependencies; instant revocation |
+| Screenshots | Playwright runner on **the agent's machine** (`vistazo capture` / `publish --capture`) | See "Feasibility" |
+| Live site | iframe + pin layer; optional `bridge.js` in the app to anchor to elements | Works with any site that allows framing |
 
-Permisos: `src/lib/auth.ts` (`access()` decide por app; `needScope()` limita al invitado a su revisión). Invitado: ver,
-probar, comentar, marcar lo probado, enviar comentarios; no aprueba, no resuelve, no lee el prompt. Agente: publicar y
-leer feedback; no comenta, no resuelve, no aprueba. Autor de una revisión: no la aprueba ni pide cambios en ella.
+Permissions: `src/lib/auth.ts` (`access()` decides per app; `needScope()` limits guests to their review). Guest: view,
+try, comment, mark checks, send comments; cannot approve, resolve or read the prompt. Agent: publish and read feedback;
+cannot comment, resolve or approve. Review author: cannot approve or request changes on their own review.
 
-## Viabilidad comprobada (y lo que no)
+## Feasibility (what was checked, and what was not)
 
-- **Playwright en el serverless de Vercel: no lo uso.** Las funciones tienen límite de tamaño (250 MB descomprimido)
-  y de duración; Chromium no cabe sin paquetes recortados (`@sparticuz/chromium`) y un recorrido largo con vídeo choca
-  con los tiempos. Además el runner necesita llegar a entornos locales o privados del desarrollador. Por eso corre donde
-  está el agente. Comprobado en local: captura por paso, enmascarado de campos (`mask`) y vídeo por recorrido.
-- **Qué graba Playwright**: el contenido de la página (PNG por paso, `webm` por recorrido). No graba audio, ni la barra
-  del navegador, ni apps nativas, ni diálogos del sistema operativo.
-- **Apps nativas (Expo/iOS/Android)**: Playwright no sirve. Vía soportada: subida manual (formulario) o carpeta de
-  capturas de otro runner (`--assets`: simulador, Appium/WebdriverIO, Maestro) + vía de prueba con **QR / deep link**.
-  Comentar «en vivo» una app nativa necesitaría streaming de emulador (tipo Appetize): no incluido.
-- **Web en vivo**: solo si la web se deja enmarcar (sin `X-Frame-Options: DENY` ni `frame-ancestors`). Si no, el revisor
-  la abre aparte y comenta sobre capturas o en general. Sin `bridge.js` la URL del iframe no se puede leer (origen
-  cruzado): la indica el revisor.
-- **Despliegues protegidos de Vercel**: las URLs por despliegue de un proyecto Hobby piden login de Vercel y un invitado
-  externo no puede abrirlas. La demo usa el alias de producción con una ruta por versión (`/v1/`, `/v2/`).
+- **Playwright on Vercel serverless: not used.** Functions have size limits (250 MB unzipped) and duration limits;
+  Chromium does not fit without trimmed packages (`@sparticuz/chromium`) and a long flow with video hits the time
+  limits. The runner also needs to reach the developer's local or private environments, so it runs where the agent
+  is. Checked locally: screenshot per step, field masking (`mask`) and video per flow.
+- **What Playwright records**: page content (PNG per step, `webm` per flow). It does not record audio, the browser bar,
+  native apps or OS dialogs.
+- **Native apps (Expo/iOS/Android)**: Playwright does not apply. Supported path: manual upload (form) or a folder of
+  screenshots from another runner (`--assets`: simulator, Appium/WebdriverIO, Maestro) + a way to try it with a
+  **QR / deep link**. Commenting "live" on a native app would need emulator streaming (like Appetize): not included.
+- **Live site**: only if the site allows framing (no `X-Frame-Options: DENY` or `frame-ancestors`). Otherwise the
+  reviewer opens it separately and comments on screenshots or in general. Without `bridge.js` the iframe URL cannot be
+  read (cross-origin): the reviewer states it.
+- **Protected Vercel deployments**: per-deployment URLs of a Hobby project ask for a Vercel login, so an external guest
+  cannot open them. The demo uses the production alias with one path per version (`/v1/`, `/v2/`).
 
-## Kit de prueba
+## Test kit
 
-Lo que quien revisa necesita a mano: usuarios, contraseñas de test, cupones, códigos que escanear, productos… Es un
-JSON de páginas → filas → etiquetas (`src/lib/kit.ts`), **el mismo formato que una página de etiquetas QR**, así que un
-JSON o una página HTML ya generados (con su bloque `<script id="page-data">`) se publican tal cual
-(`vistazo publish --kit`). En pantalla solo se ve el nombre y el código; el QR se abre de uno en uno para que un
-escáner no lea el de al lado. Los tipos (`kind`) son libres: hay genéricos y cada app añade los suyos con nombre,
-color e icono (en Ajustes o en `kinds` de `vistazo.json`).
+What reviewers need at hand: users, test passwords, coupons, codes to scan, products… It is JSON of pages → rows →
+labels (`src/lib/kit.ts`), **the same format as a QR label page**, so an existing JSON or HTML page (with its
+`<script id="page-data">` block) can be published as is (`vistazo publish --kit`). On screen you only see the name and
+the code; QR codes open one at a time so a scanner never reads the one next to it. Types (`kind`) are free: there are
+generic ones and each app adds its own with a name, color and icon (in Settings or in `kinds` in `vistazo.json`).
 
-## Agente (CLI / MCP)
+## Agent (CLI / MCP)
 
-Un `vistazo.json` en la raíz del repo (sin secretos) evita repetir parámetros:
+A `vistazo.json` at the root of the repo (no secrets) saves repeating parameters:
 
 ```json
 { "url": "https://vistazo-pi.vercel.app", "project": "<id>", "platform": "mobile",
   "kit": ".vistazo/kit.json", "open": [{ "kind": "qr", "label": "Expo", "url": "exp+app://…" }],
-  "kinds": [{ "key": "pallet", "name": "Palé", "color": "orange", "icon": "stack" }] }
+  "kinds": [{ "key": "pallet", "name": "Pallet", "color": "orange", "icon": "stack" }] }
 ```
 
-Para agentes de código hay una skill lista para copiar en `skills/vistazo/SKILL.md`: cómo publicar con capturas, kit
-de prueba y QR, y cómo tratar el feedback como datos.
+For coding agents there is a ready-to-copy skill in `skills/vistazo/SKILL.md`: how to publish with screenshots, test
+kit and QR, and how to treat feedback as data.
 
 ```bash
-export VISTAZO_URL=https://vistazo-pi.vercel.app VISTAZO_PROJECT=<id> VISTAZO_API_KEY=vzk_…   # nunca en el repo
+export VISTAZO_URL=https://vistazo-pi.vercel.app VISTAZO_PROJECT=<id> VISTAZO_API_KEY=vzk_…   # never in the repo
 cd cli && npm i && npx playwright install chromium
-node cli/bin/vistazo.mjs publish --config vistazo.config.json --capture --title "…" --summary "…"   # rama actual
-node cli/bin/vistazo.mjs publish --shots ./capturas --qr "exp+app://…" --kit kit.json --title "…"   # app móvil
-node cli/bin/vistazo.mjs publish … --deeplink "miapp://…" --download https://…/app.apk   # más formas de abrirla
-node cli/bin/vistazo.mjs publish … --branch feature/x --pr https://github.com/o/r/pull/7 --test-data "usuario / clave de test"
-node cli/bin/vistazo.mjs feedback                   # prompt de la revisión de tu rama (o --json)
-node cli/bin/vistazo.mjs reviews                    # revisiones de la app con su estado
-node cli/bin/vistazo.mjs mcp                        # servidor MCP por stdio
+node cli/bin/vistazo.mjs publish --config vistazo.config.json --capture --title "…" --summary "…"   # current branch
+node cli/bin/vistazo.mjs publish --shots ./screenshots --qr "exp+app://…" --kit kit.json --title "…"   # mobile app
+node cli/bin/vistazo.mjs publish … --deeplink "myapp://…" --download https://…/app.apk   # more ways to open it
+node cli/bin/vistazo.mjs publish … --branch feature/x --pr https://github.com/o/r/pull/7 --test-data "test user / password"
+node cli/bin/vistazo.mjs feedback                   # prompt for your branch's review (or --json)
+node cli/bin/vistazo.mjs reviews                    # the app's reviews and their state
+node cli/bin/vistazo.mjs mcp                        # MCP server over stdio
 ```
 
-Sin `--pr`, si `gh` está instalado y autenticado, la CLI lee la PR de la rama (`gh pr view`, solo lectura) y guarda
-**solo el enlace**: no se sincroniza estado ni se escribe nada en GitHub.
+Without `--pr`, if `gh` is installed and signed in, the CLI reads the branch's PR (`gh pr view`, read only) and stores
+**only the link**: no state is synced and nothing is written to GitHub.
 
-`vistazo.config.json` (ejemplo real en `demo/vistazo.config.json`): `baseUrl`, `allowHosts` (la CLI se niega a capturar
-otros hosts), `viewport`, `mask`, `video` y `flows[]` con `description` en lenguaje natural + `actions` que traduce el
-agente (`goto`, `click`, `fill`, `select`, `press`, `waitFor`, `wait`, `expectText`). Secretos con `${env:VAR}`.
-Plantillas e instrucciones para agentes y otros runners en `integrations/`.
+`vistazo.config.json` (real example in `demo/vistazo.config.json`): `baseUrl`, `allowHosts` (the CLI refuses to capture
+other hosts), `viewport`, `mask`, `video` and `flows[]` with a plain-language `description` + `actions` written by the
+agent (`goto`, `click`, `fill`, `select`, `press`, `waitFor`, `wait`, `expectText`). Secrets with `${env:VAR}`.
+Templates and instructions for agents and other runners in `integrations/`.
 
-## Seguridad
+## Security
 
-- Secretos solo en variables de entorno (`SESSION_SECRET`, `FIREBASE_SERVICE_ACCOUNT_B64`, `BLOB_READ_WRITE_TOKEN`).
-  La service account `vistazo-backend` solo tiene `roles/datastore.user`.
-- Enlaces de invitado y claves: se guarda el hash; el secreto se muestra una vez. Revocación inmediata.
-- **Feedback para el agente** (`src/lib/feedback.ts`, `src/lib/untrusted.ts`). Todo lo que escriben revisores e
-  invitados (y lo que llega del navegador: URL, selector, texto del elemento) es dato de terceros. Capas:
-  1. Un solo canal: los datos de terceros solo van dentro de un bloque JSON; fuera solo hay texto del equipo y números.
-  2. Delimitador con código aleatorio por generación (`<reviewer_comments_…>`), y `<`, `>`, `&` escapados dentro.
-  3. Sin caracteres invisibles (tags Unicode, bidi, anchura cero…), al guardar y al generar.
-  4. Lo que parece una orden para un agente se aparta por defecto; solo una persona, desde la web, puede incluirlo.
-  5. Persona en el medio: el prompt pide un plan antes de tocar nada; el agente no recibe el resumen markdown; la CLI y
-     el MCP no tienen herramientas para borrar, desplegar ni hacer push.
+- Secrets only in environment variables (`SESSION_SECRET`, `FIREBASE_SERVICE_ACCOUNT_B64`, `BLOB_READ_WRITE_TOKEN`).
+  The `vistazo-backend` service account only has `roles/datastore.user`.
+- Guest links and keys: only the hash is stored; the secret is shown once. Instant revocation.
+- **Feedback for the agent** (`src/lib/feedback.ts`, `src/lib/untrusted.ts`). Everything reviewers and guests write (and
+  whatever comes from the browser: URL, selector, element text) is third-party data. Layers:
+  1. One channel: third-party data only goes inside a JSON block; outside it there is only team text and numbers.
+  2. A delimiter with a random code per generation (`<reviewer_comments_…>`), with `<`, `>`, `&` escaped inside.
+  3. No invisible characters (Unicode tags, bidi, zero width…), when saving and when generating.
+  4. Anything that looks like an order for an agent is set aside by default; only a person, from the web, can include it.
+  5. A person in the middle: the prompt asks for a plan before touching anything; the agent never gets the markdown
+     summary; the CLI and MCP have no tools to delete, deploy or push.
 
-  Pruebas: `npm test` (propiedades con marcas en cada campo de terceros + fuzz), `scripts/e2e.mjs` (contra la API) y
-  `scripts/redteam-feedback.ts` (comportamiento con un modelo real y herramientas falsas; cuesta dinero). Ningún
-  formato garantiza que un modelo no obedezca un texto: por eso la capa 5 es la que contiene el daño.
-- Los enlaces para abrir la app admiten esquemas propios (`exp+…://`) pero nunca `javascript:`, `data:` ni `file:`;
-  el kit externo solo `https://`. Los QR se generan en el navegador: nada sale a servicios externos.
-- Los artifacts HTML/SVG se sirven como descarga, nunca se renderizan en el origen de Vistazo.
-- `bridge.js` solo habla con la ventana del origen del que se cargó; no envía nada a ningún servidor ni lee formularios.
+  Tests: `npm test` (property tests with markers in every third-party field + fuzzing), `scripts/e2e.mjs` (against the
+  API) and `scripts/redteam-feedback.ts` (behaviour with a real model and fake tools; costs money). No format can
+  guarantee that a model will not obey a text: that is why layer 5 is the one that contains the damage.
+- Links to open the app allow custom schemes (`exp+…://`) but never `javascript:`, `data:` or `file:`; the external
+  kit only allows `https://`. QR codes are generated in the browser: nothing goes to external services.
+- HTML/SVG artifacts are served as downloads, never rendered on the Vistazo origin.
+- `bridge.js` only talks to the window of the origin it was loaded from; it sends nothing to any server and does not
+  read forms.
 
-## Desarrollo
+## Development
 
 ```bash
 npm i && vercel env pull .env.local
-npm test                                             # aislamiento del prompt y formato del kit (sin red)
-# Local sin tocar la base de datos real: emulador de Firestore + copia de la demo (solo lee de producción)
+npm test                                             # prompt isolation and kit format (no network)
+# Local without touching the real database: Firestore emulator + a copy of the demo (only reads from production)
 java -jar ~/.cache/firebase/emulators/cloud-firestore-emulator-*.jar --host=127.0.0.1 --port=8085 &
 FIRESTORE_EMULATOR_HOST=127.0.0.1:8085 SOURCE=https://vistazo-pi.vercel.app DEMO_PASSWORD=… node scripts/seed-local.mjs
 FIRESTORE_EMULATOR_HOST=127.0.0.1:8085 npx next dev -p 3100
-VISTAZO_URL=http://localhost:3100 PROJECT=<id> DEMO_PASSWORD=… node scripts/e2e.mjs   # circuito completo (crea datos)
+VISTAZO_URL=http://localhost:3100 PROJECT=<id> DEMO_PASSWORD=… node scripts/e2e.mjs   # full loop (creates data)
 ```
 
-`scripts/walkthrough*.mjs` grabaron el vídeo de la interfaz anterior; no están adaptados a la nueva.
-
-## Estructura
+## Structure
 
 ```
-src/app            páginas (/app, /p/:id, /r/:id, /s/:token) y API (route handlers)
-src/components     interfaz; review/ es todo lo de una revisión
-src/lib            modelo, permisos, estado del circuito, kit, feedback aislado
-cli/               CLI y servidor MCP (vistazo publish | feedback | reviews | mcp)
-skills/vistazo     skill para agentes de código
-integrations/      plantillas: Expo OTA, GitHub Actions, Maestro, Appium, Claude Code
-demo/              app de ejemplo ficticia (Brasa) y su config de capturas
-tests/, scripts/   tests unitarios, e2e contra la API, red team del prompt
+src/app            pages (/app, /p/:id, /r/:id, /s/:token) and API (route handlers)
+src/components     UI; review/ is everything about a review
+src/lib            model, permissions, loop state, test kit, isolated feedback
+cli/               CLI and MCP server (vistazo publish | feedback | reviews | mcp)
+skills/vistazo     skill for coding agents
+integrations/      templates: Expo OTA, GitHub Actions, Maestro, Appium, Claude Code
+demo/              fictional sample app (Brasa) and its capture config
+tests/, scripts/   unit tests, e2e against the API, prompt red team
 ```
 
-Límites y pendientes: `docs/PENDIENTE.md`. Compatibilidad futura con apps nativas con OTA por PR:
-`docs/COMPATIBILIDAD-NATIVA.md` e `integrations/`.
+Limitations and next steps: `docs/LIMITATIONS.md`. Native apps with OTA previews per PR: `docs/NATIVE-APPS.md` and
+`integrations/`.
 
-## Licencia
+## License
 
 [MIT](LICENSE).

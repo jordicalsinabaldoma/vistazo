@@ -6,9 +6,9 @@ import { handle, ok } from "@/lib/http";
 
 type Ctx = { params: Promise<{ id: string }> };
 
-// Subida directa al almacén (sin pasar por la función: evita el límite de 4,5 MB
-// del cuerpo en Vercel). El servidor firma un token de un solo fichero, privado,
-// dentro de p/<proyecto>/, con tipo y tamaño acotados.
+// Direct upload to storage (skips the function, so Vercel's 4.5 MB body limit
+// doesn't apply). The server signs a single-file, private token inside
+// p/<project>/, with bounded type and size.
 const ALLOWED = ["image/*", "video/*", "application/pdf", "application/zip", "text/html", "text/plain", "application/json"];
 
 const schema = z.object({

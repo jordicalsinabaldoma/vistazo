@@ -17,7 +17,7 @@ const ICON = {
   muted: Circle,
 } as const;
 
-/** Etiqueta de estado de una revisión. Siempre igual: mismo color, mismo texto. */
+/** State label of a review. Always the same: same colour, same text. */
 export function StateLabel({ stage, label, size = "md" }: { stage: Stage; label: string; size?: "md" | "lg" }) {
   const tone = stageTone[stage];
   const I = ICON[tone];
@@ -33,11 +33,11 @@ export function StateLabel({ stage, label, size = "md" }: { stage: Stage; label:
   );
 }
 
-/** Tira del circuito: Publicar → Revisar → Corregir → Aprobar, con el paso actual marcado. */
+/** Circuit strip: Publish → Review → Fix → Approve, with the current step marked. */
 export function Circuit({ stage, version }: { stage: Stage; version: number }) {
   const cur = circuitStep(stage);
   return (
-    <ol className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm sm:gap-x-1" aria-label="Circuito de la revisión">
+    <ol className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm sm:gap-x-1" aria-label="Review circuit">
       {CIRCUIT.map((s, i) => {
         const done = i < cur || stage === "closed";
         const now = i === cur && stage !== "closed";
@@ -53,7 +53,7 @@ export function Circuit({ stage, version }: { stage: Stage; version: number }) {
             </span>
             <span className={now ? "font-semibold text-ink" : done ? "text-ink" : "text-muted"}>
               {s}
-              {s === "Corregir" && version > 1 && <span className="text-muted"> (v{version})</span>}
+              {i === 2 && version > 1 && <span className="text-muted"> (v{version})</span>}
             </span>
           </li>
         );
@@ -62,7 +62,7 @@ export function Circuit({ stage, version }: { stage: Stage; version: number }) {
   );
 }
 
-/** Diálogo nativo: Esc cierra, el foco queda dentro y el fondo es inerte. */
+/** Native dialog: Esc closes it, focus stays inside and the background is inert. */
 export function Sheet({
   open,
   onClose,
@@ -103,7 +103,7 @@ export function Sheet({
               </h2>
               {description && <div className="mt-1 text-sm text-muted">{description}</div>}
             </div>
-            <button className="btn btn-quiet -mr-2 -mt-1 px-2" onClick={onClose} aria-label="Cerrar">
+            <button className="btn btn-quiet -mr-2 -mt-1 px-2" onClick={onClose} aria-label="Close">
               <X size={18} aria-hidden />
             </button>
           </header>
@@ -114,7 +114,7 @@ export function Sheet({
   );
 }
 
-export function CopyButton({ text, label = "Copiar", className = "btn btn-sm" }: { text: string; label?: string; className?: string }) {
+export function CopyButton({ text, label = "Copy", className = "btn btn-sm" }: { text: string; label?: string; className?: string }) {
   const [done, setDone] = useState(false);
   return (
     <button
@@ -127,7 +127,7 @@ export function CopyButton({ text, label = "Copiar", className = "btn btn-sm" }:
       }}
     >
       {done ? <Check size={15} aria-hidden /> : <Copy size={15} aria-hidden />}
-      <span aria-live="polite">{done ? "Copiado" : label}</span>
+      <span aria-live="polite">{done ? "Copied" : label}</span>
     </button>
   );
 }
@@ -157,7 +157,7 @@ export const plural = (n: number, one: string, many: string) => `${n} ${n === 1 
 
 const AVATAR = ["#c2410c", "#2f6b55", "#5b4fc4", "#1f5f99", "#8a5a00", "#9d174d", "#0f766e", "#4d5563"];
 
-/** Avatar con iniciales. El color sale del nombre, siempre el mismo para la misma persona. */
+/** Avatar with initials. The colour comes from the name, so it is always the same for the same person. */
 export function Avatar({ name, kind, size = 24 }: { name: string; kind?: string; size?: number }) {
   const ini =
     kind === "agent"
@@ -190,24 +190,24 @@ export function Avatar({ name, kind, size = 24 }: { name: string; kind?: string;
   );
 }
 
-/** «hace 3 h», «ayer», «10 nov». La fecha exacta va en el title. */
+/** "3 h ago", "yesterday", "10 Nov". The exact date goes in the title. */
 export function Ago({ t }: { t: number }) {
   const [now] = useState(() => Date.now());
   const s = Math.max(0, (now - t) / 1000);
   const txt =
     s < 60
-      ? "ahora"
+      ? "now"
       : s < 3600
-        ? `hace ${Math.floor(s / 60)} min`
+        ? `${Math.floor(s / 60)} min ago`
         : s < 86400
-          ? `hace ${Math.floor(s / 3600)} h`
+          ? `${Math.floor(s / 3600)} h ago`
           : s < 172800
-            ? "ayer"
+            ? "yesterday"
             : s < 604800
-              ? `hace ${Math.floor(s / 86400)} días`
-              : new Date(t).toLocaleDateString("es-ES", { day: "numeric", month: "short" });
+              ? `${Math.floor(s / 86400)} days ago`
+              : new Date(t).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
   return (
-    <time dateTime={new Date(t).toISOString()} title={new Date(t).toLocaleString("es-ES")} suppressHydrationWarning>
+    <time dateTime={new Date(t).toISOString()} title={new Date(t).toLocaleString("en-GB")} suppressHydrationWarning>
       {txt}
     </time>
   );
@@ -215,8 +215,8 @@ export function Ago({ t }: { t: number }) {
 
 export type MenuItem = { label: string; on: () => void; icon?: React.ReactNode; danger?: boolean } | null | false;
 
-/** Menú «Más»: Esc cierra, clic fuera cierra. */
-export function MoreMenu({ items, label = "Más acciones", align = "right" }: { items: MenuItem[]; label?: string; align?: "left" | "right" }) {
+/** "More" menu: Esc or a click outside closes it. */
+export function MoreMenu({ items, label = "More actions", align = "right" }: { items: MenuItem[]; label?: string; align?: "left" | "right" }) {
   const list = items.filter(Boolean) as Exclude<MenuItem, null | false>[];
   const [open, setOpen] = useState(false);
   if (!list.length) return null;
@@ -255,7 +255,7 @@ export function MoreMenu({ items, label = "Más acciones", align = "right" }: { 
   );
 }
 
-/** Código QR generado en el navegador (nada sale a servicios externos). */
+/** QR code generated in the browser (nothing is sent to external services). */
 export function QrImage({ value, size = 192, label }: { value: string; size?: number; label: string }) {
   const [src, setSrc] = useState("");
   useEffect(() => {
@@ -273,11 +273,11 @@ export function QrImage({ value, size = 192, label }: { value: string; size?: nu
   );
 }
 
-/** El circuito en vertical, para la barra lateral. */
+/** The circuit, vertical, for the sidebar. */
 export function CircuitList({ stage, version }: { stage: Stage; version: number }) {
   const cur = circuitStep(stage);
   return (
-    <ol className="grid gap-0" aria-label="Circuito de la revisión">
+    <ol className="grid gap-0" aria-label="Review circuit">
       {CIRCUIT.map((s, i) => {
         const done = i < cur || stage === "closed";
         const now = i === cur && stage !== "closed";
@@ -293,7 +293,7 @@ export function CircuitList({ stage, version }: { stage: Stage; version: number 
             </span>
             <span className={now ? "font-semibold text-ink" : done ? "text-ink" : "text-muted"}>
               {s}
-              {s === "Corregir" && version > 1 && <span className="font-normal text-muted"> · v{version}</span>}
+              {i === 2 && version > 1 && <span className="font-normal text-muted"> · v{version}</span>}
             </span>
           </li>
         );
@@ -302,7 +302,7 @@ export function CircuitList({ stage, version }: { stage: Stage; version: number 
   );
 }
 
-/** Marca de la app: inicial sobre un color estable. */
+/** App mark: initial on a stable colour. */
 export function AppMark({ name, size = 36 }: { name: string; size?: number }) {
   let h = 0;
   for (const c of name) h = (h * 31 + c.charCodeAt(0)) >>> 0;

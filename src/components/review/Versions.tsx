@@ -6,12 +6,12 @@ import { latestVerdicts } from "@/lib/flow";
 import type { Ctx } from "./types";
 
 const V = {
-  approve: { Icon: CheckCircle, cls: "text-ok", text: "aprobó" },
-  changes: { Icon: XCircle, cls: "text-warn", text: "pidió cambios" },
-  comment: { Icon: ChatCircle, cls: "text-muted", text: "comentó" },
+  approve: { Icon: CheckCircle, cls: "text-ok", text: "approved" },
+  changes: { Icon: XCircle, cls: "text-warn", text: "requested changes" },
+  comment: { Icon: ChatCircle, cls: "text-muted", text: "commented" },
 } as const;
 
-/** Versiones de la revisión, como los commits de una PR: la más reciente arriba. */
+/** Versions of the review, like the commits of a PR: newest on top. */
 export default function Versions({ ctx }: { ctx: Ctx }) {
   const { versions, revision: r, comments } = ctx.data;
   return (
@@ -27,28 +27,28 @@ export default function Versions({ ctx }: { ctx: Ctx }) {
               <div className="min-w-0 flex-1">
                 <p className="font-semibold">
                   {v.title}
-                  {v.id === r.id && <span className="chip ml-2 bg-accent-soft align-middle text-accent-ink">la que estás viendo</span>}
+                  {v.id === r.id && <span className="chip ml-2 bg-accent-soft align-middle text-accent-ink">the one you are viewing</span>}
                 </p>
                 <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[13px] text-muted">
                   {v.publishedBy.via === "apikey" ? <Robot size={14} aria-hidden /> : <Avatar name={v.publishedBy.name} size={16} />}
                   {v.publishedBy.name}
-                  {v.publishedBy.via === "apikey" ? " con su agente" : " desde el formulario"}, <Ago t={v.createdAt} />
+                  {v.publishedBy.via === "apikey" ? " with their agent" : " from the form"}, <Ago t={v.createdAt} />
                 </p>
                 {v.summary?.trim() && <p className="mt-2 line-clamp-3 max-w-[70ch] whitespace-pre-wrap text-sm">{v.summary}</p>}
                 <p className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-muted">
                   {v.screens > 0 && (
                     <span className="inline-flex items-center gap-1">
-                      <Images size={14} aria-hidden /> {v.screens} {v.screens === 1 ? "pantalla" : "pantallas"}
+                      <Images size={14} aria-hidden /> {v.screens} {v.screens === 1 ? "screen" : "screens"}
                     </span>
                   )}
                   {v.live && (
                     <span className="inline-flex items-center gap-1">
-                      <Browser size={14} aria-hidden /> en vivo
+                      <Browser size={14} aria-hidden /> live
                     </span>
                   )}
                   {born > 0 && (
                     <span className="inline-flex items-center gap-1">
-                      <ChatCircle size={14} aria-hidden /> {born} {born === 1 ? "comentario nuevo" : "comentarios nuevos"}
+                      <ChatCircle size={14} aria-hidden /> {born} {born === 1 ? "new comment" : "new comments"}
                     </span>
                   )}
                   {meta.map(([k, val]) => (
@@ -73,13 +73,13 @@ export default function Versions({ ctx }: { ctx: Ctx }) {
               </div>
               <div className="flex shrink-0 gap-2">
                 {v.number > 1 && (
-                  <Link className="btn btn-sm" href={`/r/${v.id}?revisar=cambios`}>
-                    Qué cambió
+                  <Link className="btn btn-sm" href={`/r/${v.id}?review=changes`}>
+                    What changed
                   </Link>
                 )}
                 {v.id !== r.id && (
                   <Link className="btn btn-sm" href={`/r/${v.id}`}>
-                    Ver
+                    View
                   </Link>
                 )}
               </div>

@@ -1,16 +1,16 @@
-// Modelo de datos de Vistazo.
-// App (colección `projects`) → Revisión (colección `reviews`, como una PR: un cambio con
-// su propósito) → Versión (colección `revisions`, v1, v2… dentro de la revisión,
-// inmutable salvo veredictos y checks) → Recorrido → Paso → Adjuntos.
-// Los comentarios pertenecen a la REVISIÓN y llevan la lista de versiones en las que
-// están vigentes (revisionIds): se arrastran entre versiones de la misma revisión sin
-// duplicarse y el historial queda intacto.
+// Vistazo data model.
+// App (`projects` collection) → Review (`reviews` collection, like a PR: one change with
+// its purpose) → Version (`revisions` collection, v1, v2… inside the review, immutable
+// except for verdicts and checks) → Flow → Step → Attachments.
+// Comments belong to the REVIEW and carry the list of versions where they are still
+// current (revisionIds): they carry over between versions of the same review without
+// being duplicated, and the history stays intact.
 
 import type { KindDef, TestKit } from "./kit";
 
 export type Role = "owner" | "editor" | "reviewer";
 
-/** Cómo se prueba la app: web (en vivo en el navegador), app móvil (QR, deep link, descarga) u otra. */
+/** How the app is tested: web (live in the browser), mobile app (QR, deep link, download) or other. */
 export type Platform = "web" | "mobile" | "desktop" | "other";
 
 export interface User {
@@ -25,40 +25,40 @@ export interface ChecklistItem {
   id: string;
   title: string;
   description?: string;
-  flowKey?: string; // recorrido asociado (opcional)
+  flowKey?: string; // related flow (optional)
 }
 
 export interface Project {
   id: string;
   name: string;
-  context: string; // contexto permanente del proyecto (markdown)
+  context: string; // permanent project context (markdown)
   checklist: ChecklistItem[];
-  members: Record<string, Role>; // userId → rol
+  members: Record<string, Role>; // userId → role
   memberIds: string[];
   createdAt: number;
   createdBy: string;
-  revisionCount: number; // legado: versiones publicadas en total
-  reviewCount?: number; // ausente = datos anteriores a las revisiones (se migran solos)
+  revisionCount: number; // legacy: total versions published
+  reviewCount?: number; // missing = data from before reviews existed (migrated automatically)
   platform?: Platform;
-  kinds?: KindDef[]; // tipos de etiqueta propios para el kit de prueba
+  kinds?: KindDef[]; // custom label types for the test kit
 }
 
-/** Revisión: un cambio o feature con su propósito, como una pull request. */
+/** Review: one change or feature with its purpose, like a pull request. */
 export interface Review {
   id: string;
   projectId: string;
-  number: number; // #1, #2… dentro de la app
+  number: number; // #1, #2… within the app
   title: string;
-  purpose: string; // qué cambia y para qué
-  testPlan: ChecklistItem[]; // qué probar en ESTA revisión (además de los flujos críticos de la app)
-  testData: string; // notas de prueba en texto libre (nunca datos reales)
-  testKit?: TestKit; // kit de prueba estructurado: usuarios, códigos que escanear, productos…
+  purpose: string; // what changes and why
+  testPlan: ChecklistItem[]; // what to test in THIS review (on top of the app's critical flows)
+  testData: string; // free-text test notes (never real data)
+  testKit?: TestKit; // structured test kit: users, codes to scan, products…
   branch?: string;
-  prUrl?: string; // solo un enlace: no se sincroniza estado
+  prUrl?: string; // just a link: no state is synced
   status: "open" | "closed";
   closedAt?: number;
   closedBy?: Author;
-  author: { id: string; name: string }; // usuario responsable (si publica un agente, quien creó su clave)
+  author: { id: string; name: string }; // responsible user (if an agent publishes, whoever created its key)
   versionCount: number;
   latestRevisionId: string;
   createdAt: number;
@@ -68,7 +68,7 @@ export interface Review {
 export interface ShareLink {
   id: string;
   projectId: string;
-  reviewId?: string; // si está, el enlace solo abre esa revisión
+  reviewId?: string; // if set, the link only opens that review
   tokenHash: string;
   label: string;
   revoked: boolean;
@@ -93,7 +93,7 @@ export type AssetKind = "image" | "video" | "artifact";
 export interface Asset {
   id: string;
   kind: AssetKind;
-  pathname: string; // blob privado: p/<projectId>/...
+  pathname: string; // private blob: p/<projectId>/...
   name: string;
   contentType: string;
   size?: number;
@@ -114,7 +114,7 @@ export interface Step {
 export interface Flow {
   key: string;
   title: string;
-  description?: string; // lenguaje natural: «entra como cliente, crea un pedido y llega al pago»
+  description?: string; // plain language: "sign in as a customer, create an order and reach checkout"
   steps: Step[];
 }
 
@@ -132,7 +132,7 @@ export interface Approval {
   note?: string;
 }
 
-/** Resultado de «Terminar revisión». Cuenta el último de cada persona en cada versión. */
+/** Result of "Finish review". The latest one per person per version counts. */
 export interface Verdict {
   kind: "approve" | "changes" | "comment";
   author: Author;
@@ -151,9 +151,9 @@ export interface Revision {
   id: string;
   projectId: string;
   reviewId: string;
-  number: number; // número de versión DENTRO de la revisión (v1, v2…)
+  number: number; // version number WITHIN the review (v1, v2…)
   title: string;
-  summary: string; // contexto de esta versión (qué cambia, qué mirar)
+  summary: string; // context for this version (what changes, what to look at)
   liveUrl?: string;
   previews: PreviewLink[];
   flows: Flow[];
@@ -161,10 +161,10 @@ export interface Revision {
   publishedBy: { id: string; name: string; via: "user" | "apikey" };
   createdAt: number;
   previousRevisionId?: string;
-  approvals: Approval[]; // derivado de verdicts (último «approve» vigente de cada usuario)
+  approvals: Approval[]; // derived from verdicts (each user's latest current "approve")
   verdicts?: Verdict[];
-  checks: Record<string, CheckResult>; // checklistItemId → resultado
-  meta?: Record<string, string>; // libre: rama, commit, PR, runtimeVersion…
+  checks: Record<string, CheckResult>; // checklistItemId → result
+  meta?: Record<string, string>; // free-form: branch, commit, PR, runtimeVersion…
 }
 
 export type Anchor =
@@ -175,10 +175,10 @@ export type Anchor =
       flowKey: string;
       stepKey: string;
       assetId: string;
-      pathname?: string; // copia del adjunto, para ver la captura original al arrastrar
+      pathname?: string; // copy of the attachment, to show the original screenshot when carried over
       x: number; // 0..1
       y: number; // 0..1
-      t?: number; // segundos (vídeo)
+      t?: number; // seconds (video)
     }
   | {
       type: "live";
@@ -210,7 +210,7 @@ export interface Comment {
   reviewId: string;
   originRevisionId: string;
   originRevisionNumber: number;
-  revisionIds: string[]; // revisiones en las que está vigente
+  revisionIds: string[]; // versions where it is still current
   anchor: Anchor;
   body: string;
   author: Author;

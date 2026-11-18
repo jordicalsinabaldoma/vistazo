@@ -1,9 +1,8 @@
-// Estado de una revisión y «siguiente paso». Lógica pura: la usan el servidor
-// (listas, buzón «Te toca») y el cliente (cabecera de la revisión), así las dos
-// vías dicen exactamente lo mismo.
+// Review state and "next step". Pure logic: used by the server (lists, the "Your turn"
+// inbox) and by the client (review header), so both say exactly the same thing.
 //
-// El estado se CALCULA, no se marca a mano, y nunca bloquea nada: solo decide qué
-// botón es el principal. Todo lo demás sigue a mano en segundo plano.
+// The state is COMPUTED, never set by hand, and it never blocks anything: it only
+// decides which button is the primary one. Everything else stays available.
 
 import type { Author, Verdict } from "./model";
 
@@ -11,15 +10,15 @@ export type Stage = "pending" | "feedback" | "changes" | "approved" | "closed";
 
 export interface StageInput {
   status: "open" | "closed";
-  version: number; // número de la última versión
-  verdicts: Verdict[]; // veredictos de la ÚLTIMA versión
-  openComments: number; // comentarios abiertos vigentes en la última versión
-  openHere: number; // de esos, los escritos sobre la última versión (no arrastrados)
+  version: number; // number of the latest version
+  verdicts: Verdict[]; // verdicts on the LATEST version
+  openComments: number; // open comments still in force on the latest version
+  openHere: number; // of those, the ones written on the latest version (not carried over)
 }
 
 const who = (a: Author) => `${a.kind}:${a.id ?? a.name}`;
 
-/** Último veredicto de cada persona (una persona puede cambiar de opinión). */
+/** Latest verdict of each person (people can change their mind). */
 export function latestVerdicts(verdicts: Verdict[] = []) {
   const m = new Map<string, Verdict>();
   for (const v of [...verdicts].sort((a, b) => a.at - b.at)) m.set(who(v.author), v);
@@ -38,19 +37,19 @@ export function stageOf(s: StageInput): Stage {
 export function stageLabel(stage: Stage, s: Pick<StageInput, "version" | "openComments">) {
   switch (stage) {
     case "closed":
-      return "Cerrada";
+      return "Closed";
     case "changes":
-      return "Cambios pedidos";
+      return "Changes requested";
     case "feedback":
-      return "Con comentarios";
+      return "With comments";
     case "approved":
-      return s.openComments > 0 ? `Aprobada, ${s.openComments} ${s.openComments === 1 ? "nota abierta" : "notas abiertas"}` : "Aprobada";
+      return s.openComments > 0 ? `Approved, ${s.openComments} ${s.openComments === 1 ? "open note" : "open notes"}` : "Approved";
     default:
-      return s.version > 1 ? `v${s.version} sin revisar` : "Pendiente de revisar";
+      return s.version > 1 ? `v${s.version} not reviewed` : "Pending review";
   }
 }
 
-/** Tono visual del estado: neutro, ámbar, verde o gris. Solo color con significado. */
+/** Visual tone of the state: neutral, amber, green or grey. Colour only when it means something. */
 export const stageTone: Record<Stage, "neutral" | "attention" | "done" | "muted"> = {
   pending: "neutral",
   feedback: "attention",
@@ -59,10 +58,10 @@ export const stageTone: Record<Stage, "neutral" | "attention" | "done" | "muted"
   closed: "muted",
 };
 
-/** Pasos del circuito, en el orden en que se recorren. */
-export const CIRCUIT = ["Publicar", "Revisar", "Corregir", "Aprobar"] as const;
+/** Steps of the loop, in the order they happen. */
+export const CIRCUIT = ["Publish", "Review", "Fix", "Approve"] as const;
 
-/** Índice del paso en curso dentro de CIRCUIT (4 = todo hecho). */
+/** Index of the current step within CIRCUIT (4 = all done). */
 export function circuitStep(stage: Stage) {
   return { pending: 1, feedback: 2, changes: 2, approved: 4, closed: 4 }[stage];
 }
@@ -70,42 +69,45 @@ export function circuitStep(stage: Stage) {
 export type Action = "review" | "diff" | "feedback" | "share" | "close" | "publish";
 
 export interface Viewer {
-  isAuthor: boolean; // responsable de la revisión
+  isAuthor: boolean; // owner of the review
   isGuest: boolean;
-  canVerdict: boolean; // aprobar o pedir cambios
+  canVerdict: boolean; // approve or request changes
   canPublish: boolean;
-  submitted: boolean; // ya terminó su revisión de la última versión
-  shared: boolean; // hay alguien más que puede revisarla (revisores o enlaces activos)
+  submitted: boolean; // already finished their review of the latest version
+  shared: boolean; // someone else can review it (reviewers or active links)
 }
 
 export interface NextStep {
   text: string;
   primary?: { action: Action; label: string };
-  mine: boolean; // ¿le toca a quien mira?
+  mine: boolean; // is it the viewer's turn?
 }
 
 export function nextStep(stage: Stage, version: number, v: Viewer): NextStep {
-  if (stage === "closed") return { text: "Revisión cerrada. El historial sigue disponible.", mine: false };
+  if (stage === "closed") return { text: "Review closed. The history is still available.", mine: false };
 
   if (v.isAuthor) {
     if (stage === "changes" || stage === "feedback")
       return {
-        text: stage === "changes" ? "Han pedido cambios. Llévate el feedback a tu agente y publica una nueva versión." : "Hay comentarios nuevos. Llévatelos a tu agente y publica una nueva versión.",
-        primary: { action: "feedback", label: "Llevar el feedback a tu agente" },
+        text:
+          stage === "changes"
+            ? "Changes were requested. Take the feedback to your agent and publish a new version."
+            : "There are new comments. Take them to your agent and publish a new version.",
+        primary: { action: "feedback", label: "Take the feedback to your agent" },
         mine: true,
       };
     if (stage === "approved")
-      return { text: "Está aprobada. Cuando lo tengas integrado, cierra la revisión.", primary: { action: "close", label: "Cerrar revisión" }, mine: true };
+      return { text: "It's approved. Once it's merged, close the review.", primary: { action: "close", label: "Close review" }, mine: true };
     if (!v.shared)
-      return { text: "Nadie más puede verla todavía. Compártela para que la revisen.", primary: { action: "share", label: "Compartir para revisar" }, mine: true };
-    return { text: `Esperando a que revisen la v${version}.`, mine: false };
+      return { text: "Nobody else can see it yet. Share it so it gets reviewed.", primary: { action: "share", label: "Share for review" }, mine: true };
+    return { text: `Waiting for v${version} to be reviewed.`, mine: false };
   }
 
   if (v.submitted) {
-    if (stage === "approved") return { text: "Ya la revisaste. Está aprobada.", mine: false };
-    return { text: `Ya enviaste tu revisión de la v${version}. Esperando la siguiente versión.`, mine: false };
+    if (stage === "approved") return { text: "You already reviewed it. It's approved.", mine: false };
+    return { text: `You already sent your review of v${version}. Waiting for the next version.`, mine: false };
   }
-  if (stage === "approved" && !v.canVerdict) return { text: "Está aprobada. Aún puedes probarla y comentar.", primary: { action: "review", label: "Probar y comentar" }, mine: false };
-  if (version > 1) return { text: `Hay una versión nueva (v${version}). Mira qué ha cambiado y pruébala.`, primary: { action: "diff", label: "Revisar lo que ha cambiado" }, mine: true };
-  return { text: "Prueba lo que hay que probar, comenta lo que veas y termina tu revisión.", primary: { action: "review", label: "Empezar a revisar" }, mine: true };
+  if (stage === "approved" && !v.canVerdict) return { text: "It's approved. You can still try it and comment.", primary: { action: "review", label: "Try and comment" }, mine: false };
+  if (version > 1) return { text: `There's a new version (v${version}). See what changed and try it.`, primary: { action: "diff", label: "Review what changed" }, mine: true };
+  return { text: "Try what needs testing, comment on what you see and finish your review.", primary: { action: "review", label: "Start reviewing" }, mine: true };
 }

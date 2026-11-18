@@ -10,7 +10,7 @@ export const POST = handle(async (req: Request) => {
   const b = schema.parse(await req.json());
   const snap = await col.users().where("email", "==", b.email).limit(1).get();
   const user = snap.empty ? null : (snap.docs[0].data() as User);
-  if (!user || !checkPassword(b.password, user.passwordHash)) throw unauthorized("Correo o contraseña incorrectos");
+  if (!user || !checkPassword(b.password, user.passwordHash)) throw unauthorized("Wrong email or password");
   await startSession(user.id);
   return ok({ id: user.id, name: user.name, email: user.email });
 });

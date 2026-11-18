@@ -62,20 +62,20 @@ export function KindIcon({ icon, size = 18 }: { icon: string; size?: number }) {
 
 export type QrTarget = { title: string; detail?: string; code: string; secret?: boolean; kind?: KindDef; note?: string; href?: string };
 
-/** Un solo QR a la vista, grande, para que el lector no lea el de al lado. */
+/** One big QR at a time, so the scanner never reads the one next to it. */
 export function QrDialog({ target, onClose }: { target: QrTarget | null; onClose: () => void }) {
   return (
     <Sheet open={!!target} onClose={onClose} title={target?.title ?? ""} description={target?.detail}>
       {target && (
         <div className="grid justify-items-center gap-4 pb-2 text-center">
-          <QrImage value={target.code} size={260} label={`Código QR de ${target.title}`} />
+          <QrImage value={target.code} size={260} label={`QR code for ${target.title}`} />
           <p className="max-w-full break-all font-mono text-[15px]">{target.secret ? "••••••••" : target.code}</p>
           {target.note && <p className="max-w-[48ch] whitespace-pre-wrap text-sm text-muted">{target.note}</p>}
           <div className="flex flex-wrap justify-center gap-2">
-            <CopyButton text={target.code} className="btn" label="Copiar" />
+            <CopyButton text={target.code} className="btn" label="Copy" />
             {target.href && (
               <a className="btn btn-primary" href={target.href} target="_blank" rel="noopener noreferrer">
-                Abrir
+                Open
               </a>
             )}
           </div>
@@ -86,8 +86,8 @@ export function QrDialog({ target, onClose }: { target: QrTarget | null; onClose
 }
 
 /**
- * Kit de prueba: una página por grupo (con selector), filas con su título y sus
- * etiquetas. Solo se ve el nombre y el código; el QR se abre de uno en uno.
+ * Test kit: one page per group (with a picker), rows with their title and labels.
+ * Only the name and code are shown; QR codes open one at a time.
  */
 export function KitView({ kit, kinds, compact }: { kit: TestKit; kinds?: KindDef[]; compact?: boolean }) {
   const map = kindsFor(kinds);
@@ -106,11 +106,11 @@ export function KitView({ kit, kinds, compact }: { kit: TestKit; kinds?: KindDef
     <div className="grid gap-4">
       {kit.intro && <p className="text-sm text-muted">{kit.intro}</p>}
       {pages.length > 1 && (
-        <nav className="flex items-center gap-1.5" aria-label="Páginas del kit">
-          <button className="btn btn-sm px-2" disabled={pi === 0} onClick={() => setPi(pi - 1)} aria-label="Anterior">
+        <nav className="flex items-center gap-1.5" aria-label="Kit pages">
+          <button className="btn btn-sm px-2" disabled={pi === 0} onClick={() => setPi(pi - 1)} aria-label="Previous">
             <CaretLeft size={14} aria-hidden />
           </button>
-          <select className="input min-h-8 flex-1 py-1" value={pi} onChange={(e) => setPi(Number(e.target.value))} aria-label="Página">
+          <select className="input min-h-8 flex-1 py-1" value={pi} onChange={(e) => setPi(Number(e.target.value))} aria-label="Page">
             {pages.map((p, i) => (
               <option key={i} value={i}>
                 {p.title}
@@ -118,7 +118,7 @@ export function KitView({ kit, kinds, compact }: { kit: TestKit; kinds?: KindDef
               </option>
             ))}
           </select>
-          <button className="btn btn-sm px-2" disabled={pi >= pages.length - 1} onClick={() => setPi(pi + 1)} aria-label="Siguiente">
+          <button className="btn btn-sm px-2" disabled={pi >= pages.length - 1} onClick={() => setPi(pi + 1)} aria-label="Next">
             <CaretRight size={14} aria-hidden />
           </button>
         </nav>
@@ -186,7 +186,7 @@ export function KitView({ kit, kinds, compact }: { kit: TestKit; kinds?: KindDef
       )}
       {kit.url && (
         <a className="text-sm font-medium text-accent-ink hover:underline" href={kit.url} target="_blank" rel="noopener noreferrer">
-          Abrir el kit completo en otra pestaña
+          Open the full kit in a new tab
         </a>
       )}
       <QrDialog target={qr} onClose={() => setQr(null)} />
@@ -216,7 +216,7 @@ function LabelChip({
       <button
         className="flex w-full min-w-0 items-start gap-2.5 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-sunken/60"
         onClick={() => onOpen(l)}
-        aria-label={`Ver QR de ${l.name || k.name} ${l.secret ? "" : l.code}`}
+        aria-label={`Show QR for ${l.name || k.name} ${l.secret ? "" : l.code}`}
       >
         <span className="mt-0.5 shrink-0">
           <KindIcon icon={k.icon} size={lead ? 22 : 18} />
@@ -241,7 +241,7 @@ function LabelChip({
               >
                 <span className={`min-w-0 flex-1 truncate ${p.status ? "text-bad" : ""}`}>
                   {p.name}
-                  {p.status && <span className="ml-1 text-xs">({p.status === "unexpected" ? "no esperado" : "no existe"})</span>}
+                  {p.status && <span className="ml-1 text-xs">({p.status === "unexpected" ? "not expected" : "does not exist"})</span>}
                 </span>
                 {p.quantity != null && <span className="text-muted tabular">×{p.quantity}</span>}
               </button>

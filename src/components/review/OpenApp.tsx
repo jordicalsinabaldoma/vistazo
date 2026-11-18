@@ -7,32 +7,32 @@ import { QrDialog, type QrTarget } from "./Kit";
 
 type Way = PreviewLink & { primary?: boolean };
 
-/** Los enlaces vienen de quien publica: se permite exp+…://, https://… pero nunca javascript: ni data:. */
+/** Links come from whoever publishes: exp+…:// and https://… are fine, javascript: and data: never. */
 export function safeHref(url: string) {
   const scheme = /^([a-z][a-z0-9+.-]*):/i.exec(url.trim())?.[1]?.toLowerCase();
   return scheme && !["javascript", "data", "vbscript", "file", "blob"].includes(scheme) ? url : undefined;
 }
 
-/** Todas las formas de abrir esta versión: web, QR de Expo o deep link, descarga… */
+/** Every way to open this version: web, Expo QR or deep link, download… */
 export function waysToOpen(r: Pick<Revision, "liveUrl" | "previews">): Way[] {
   const out: Way[] = [];
-  if (r.liveUrl) out.push({ kind: "web", label: "Web de esta versión", url: r.liveUrl, primary: true });
+  if (r.liveUrl) out.push({ kind: "web", label: "Web for this version", url: r.liveUrl, primary: true });
   for (const p of r.previews ?? []) out.push(p);
   return out;
 }
 
 const ICON = { web: Browser, qr: QrCode, deeplink: DeviceMobile, download: DownloadSimple } as const;
-const KIND = { web: "Web", qr: "En el móvil", deeplink: "Deep link", download: "Descarga" } as const;
+const KIND = { web: "Web", qr: "On mobile", deeplink: "Deep link", download: "Download" } as const;
 
 /**
- * Cómo abrir la app para probarla. En grande (pestaña «En el móvil»): cada forma con su
- * QR a la vista, para escanear con el móvil desde la pantalla. En pequeño (barra
- * lateral): una línea por forma y el QR al tocarla.
+ * How to open the app to test it. Full size ("On mobile" tab): each way with its QR in
+ * view, to scan from the screen with a phone. Compact (sidebar): one line per way and
+ * the QR on tap.
  */
 export default function OpenApp({ revision, size = "full" }: { revision: Pick<Revision, "liveUrl" | "previews">; size?: "full" | "compact" }) {
   const ways = waysToOpen(revision);
   const [qr, setQr] = useState<QrTarget | null>(null);
-  if (!ways.length) return <p className="text-sm text-muted">Esta versión no trae forma de abrirla: solo capturas.</p>;
+  if (!ways.length) return <p className="text-sm text-muted">This version has no way to open it: screenshots only.</p>;
 
   if (size === "compact")
     return (
@@ -48,8 +48,8 @@ export default function OpenApp({ revision, size = "full" }: { revision: Pick<Re
                 </a>
                 <button
                   className="btn btn-quiet btn-sm px-1.5"
-                  aria-label={`QR de ${w.label || KIND[w.kind]}`}
-                  title="Ver QR"
+                  aria-label={`QR for ${w.label || KIND[w.kind]}`}
+                  title="Show QR"
                   onClick={() => setQr({ title: w.label || KIND[w.kind], code: w.url, note: w.instructions, href: safeHref(w.url) })}
                 >
                   <QrCode size={16} aria-hidden />
@@ -74,21 +74,21 @@ export default function OpenApp({ revision, size = "full" }: { revision: Pick<Re
               <span className="ml-auto text-xs text-muted">{KIND[w.kind]}</span>
             </header>
             <div className="flex flex-1 flex-col items-center gap-3 p-5 text-center">
-              <QrImage value={w.url} size={200} label={`Código QR para abrir ${w.label || "la app"}`} />
+              <QrImage value={w.url} size={200} label={`QR code to open ${w.label || "the app"}`} />
               <p className="text-sm text-muted">
                 {w.kind === "web"
-                  ? "Escanéalo para abrirla en el móvil, o ábrela aquí."
+                  ? "Scan it to open it on your phone, or open it here."
                   : w.kind === "download"
-                    ? "Escanéalo con el móvil para descargarla e instalarla."
-                    : "Escanéalo con la cámara del móvil (o desde la app de desarrollo)."}
+                    ? "Scan it with your phone to download and install it."
+                    : "Scan it with your phone camera (or from the development app)."}
               </p>
               {w.instructions && <p className="max-w-[44ch] whitespace-pre-wrap text-left text-sm">{w.instructions}</p>}
               <p className="max-w-full break-all font-mono text-xs text-muted">{w.url}</p>
               <div className="mt-auto flex flex-wrap justify-center gap-2">
-                <CopyButton text={w.url} label="Copiar enlace" />
+                <CopyButton text={w.url} label="Copy link" />
                 {safeHref(w.url) && (
                   <a className="btn btn-sm" href={safeHref(w.url)} target="_blank" rel="noopener noreferrer">
-                    <ArrowSquareOut size={15} aria-hidden /> Abrir
+                    <ArrowSquareOut size={15} aria-hidden /> Open
                   </a>
                 )}
               </div>

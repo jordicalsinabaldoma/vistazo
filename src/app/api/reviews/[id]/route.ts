@@ -20,8 +20,8 @@ export const GET = handle(async (req: Request, { params }: Ctx) => {
   return ok({ review, versions });
 });
 
-// Editar la revisión (propietario o editor). El enlace a la PR es solo un enlace:
-// no se sincroniza ningún estado con GitHub.
+// Edit the review (owner or editor). The PR link is just a link:
+// no state is synced with GitHub.
 const patch = z.object({
   title: z.string().trim().min(1).max(160).optional(),
   purpose: z.string().max(20000).optional(),

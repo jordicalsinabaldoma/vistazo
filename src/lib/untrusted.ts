@@ -1,17 +1,17 @@
-// Texto de terceros (revisores, invitados, la propia web revisada): limpieza y avisos.
+// Third-party text (reviewers, guests, the reviewed web page itself): cleaning and flags.
 //
-// Esto NO es la defensa contra la inyección de instrucciones; es una capa más.
-// La defensa es estructural (feedback.ts): un solo canal para datos de terceros,
-// delimitador imposible de adivinar, persona en el medio y ninguna herramienta
-// peligrosa en la CLI/MCP. Aquí se quitan los caracteres que una persona no ve
-// (para que lo que revisa sea lo que recibe el agente) y se marcan los textos que
-// parecen órdenes para un agente, para que la persona decida si los incluye.
+// This is NOT the defence against prompt injection; it is one more layer. The defence
+// is structural (feedback.ts): a single channel for third-party data, an unguessable
+// delimiter, a human in the loop and no dangerous tools in the CLI/MCP. Here we strip
+// characters a person cannot see (so what they review is what the agent receives) and
+// flag texts that look like orders for an agent, so the person decides whether to
+// include them. Detection is multilingual (English and Spanish).
 
-// Caracteres invisibles o que reordenan el texto:
-// - U+E0000–U+E007F: «tag characters», sirven para esconder texto ASCII completo.
-// - U+E0100–U+E01EF y U+FE00–U+FE0F: selectores de variación (contrabando en emojis).
-// - Controles de dirección (bidi), anchura cero, BOM, separador mongol.
-// - Controles C0/C1 salvo salto de línea y tabulador.
+// Invisible or text-reordering characters:
+// - U+E0000–U+E007F: "tag characters", can hide a whole ASCII text.
+// - U+E0100–U+E01EF and U+FE00–U+FE0F: variation selectors (emoji smuggling).
+// - Bidi controls, zero-width characters, BOM, Mongolian vowel separator.
+// - C0/C1 controls except newline and tab.
 const INVISIBLE =
   /[\u{E0000}-\u{E007F}\u{E0100}-\u{E01EF}\uFE00-\uFE0F\u202A-\u202E\u2066-\u2069\u200E\u200F\u061C\u200B-\u200D\u2060-\u2064\u180E\uFEFF\u00AD\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F\u2028\u2029]/gu;
 
@@ -20,7 +20,7 @@ export function hasInvisible(s: string) {
   return INVISIBLE.test(s);
 }
 
-/** Limpia un texto de terceros: sin invisibles, NFC, sin avalanchas de saltos de línea. */
+/** Cleans third-party text: no invisibles, NFC, no floods of line breaks. */
 export function clean(s: string, max = 4000) {
   return s
     .normalize("NFC")
@@ -30,7 +30,7 @@ export function clean(s: string, max = 4000) {
     .slice(0, max);
 }
 
-// Para comparar: compatibilidad Unicode (＜ → <), minúsculas y sin tildes.
+// For matching: Unicode compatibility (＜ → <), lower case, no accents.
 const fold = (s: string) =>
   s
     .normalize("NFKC")
@@ -40,36 +40,36 @@ const fold = (s: string) =>
 
 const RULES: [string, RegExp][] = [
   [
-    "pide ignorar instrucciones",
-    /\b(ignora|ignorad|ignore|olvida|olvidad|forget|disregard|omite|salta(te)?)\b.{0,60}\b(instruc\w*|reglas|rules|prompt|anterior\w*|previous|above|arriba|sistema|system)/,
+    "asks to ignore instructions",
+    /\b(ignora|ignorad|ignore|olvida|olvidad|forget|disregard|omite|salta(te)?|override|bypass)\b.{0,60}\b(instruc\w*|reglas|rules|prompt|anterior\w*|previous|above|arriba|sistema|system)/,
   ],
   [
-    "se dirige a un agente o cambia su papel",
-    /\b(eres un (agente|asistente|modelo|ia)|you are (an?|the) (agent|assistant|ai|model)|act(ua|úa)? como|act as|a partir de ahora|from now on|system prompt|developer (message|mode)|nuevas instrucciones|new instructions|modo (dios|desarrollador)|jailbreak)\b/,
+    "addresses an agent or changes its role",
+    /\b(eres un (agente|asistente|modelo|ia)|you are (an?|the) (agent|assistant|ai|model)|act(ua|úa)? como|act as|a partir de ahora|from now on|system prompt|developer (message|mode)|nuevas instrucciones|new instructions|you are now|pretend (to be|you are)|your new (role|task)|modo (dios|desarrollador)|jailbreak)\b/,
   ],
   [
-    "pide comandos de git o borrar",
+    "asks for git commands or deletion",
     /\bgit\s+(push|reset|rebase|commit|checkout|clean|remote|config|filter-branch)\b|--force\b|\brm\s+-[a-z]*[rf]|\bdrop\s+(table|database)\b|\b(borra|borrad|elimina|eliminad|delete|remove|wipe)\b.{0,40}\b(carpeta|directorio|folder|repo\w*|rama|branch|tests?|base de datos|database|ficheros|archivos|files|historial|history)\b/,
   ],
-  ["pide desplegar o publicar", /\b(despliega\w*|desplegar|deploy\w*|vercel\s+(--)?prod|npm\s+publish|merge(a|ar)?\s+(a|en|to|into)\s+(main|master|prod\w*)|push\s+(a|to)\s+(main|master|prod\w*))\b/],
+  ["asks to deploy or publish", /\b(despliega\w*|desplegar|deploy\w*|vercel\s+(--)?prod|npm\s+publish|merge(a|ar)?\s+(a|en|to|into)\s+(main|master|prod\w*)|push\s+(a|to)\s+(main|master|prod\w*))\b/],
   [
-    "pide ejecutar comandos",
+    "asks to run commands",
     /\b(ejecuta\w*|corre|lanza|run|execute)\b.{0,40}(`|\b(comando|command|script|bash|shell|terminal)\b)|\b(curl|wget|powershell|chmod|sudo|pip\s+install|npm\s+(i|install|exec)|npx\s+\S+|bash\s+-c|sh\s+-c|eval\s*\()/,
   ],
   [
-    "pide revelar o enviar secretos",
+    "asks to reveal or send secrets",
     /\b(envia\w*|manda\w*|muestra\w*|revela\w*|imprime|pega|comparte|sube|send|reveal|print|share|upload|exfiltr\w*|leak|dump)\b.{0,50}\b(tokens?|api[\s_-]?keys?|secret\w*|secreto\w*|contrasenas?|passwords?|credencial\w*|\.env|ssh|clave(s)? (privada|de api|secreta)|private key|cookies?)\b/,
   ],
-  ["abre o descarga enlaces", /\b(abre|abrid|visita|descarga\w*|lee|consulta|fetch|open|visit|download|navigate|ve a|go to)\b.{0,40}https?:\/\//],
-  ["imita etiquetas de prompt", /<\/?\s*(reviewer\w*|system|assistant|user|human|instructions?|prompt|tool\w*|im_(start|end)|function\w*|data)\b[^>]*>/],
+  ["opens or downloads links", /\b(abre|abrid|visita|descarga\w*|lee|consulta|fetch|open|visit|download|navigate|ve a|go to)\b.{0,40}https?:\/\//],
+  ["imitates prompt tags", /<\/?\s*(reviewer\w*|system|assistant|user|human|instructions?|prompt|tool\w*|im_(start|end)|function\w*|data)\b[^>]*>/],
 ];
 
-/** Motivos por los que un texto parece una orden para un agente ([] si ninguno). */
+/** Reasons why a text looks like an order for an agent ([] if none). */
 export function suspicious(s: string): string[] {
   const out: string[] = [];
-  if (hasInvisible(s)) out.push("lleva caracteres ocultos");
+  if (hasInvisible(s)) out.push("contains hidden characters");
   const f = fold(s);
   for (const [why, re] of RULES) if (re.test(f)) out.push(why);
-  if (s.length > 2500) out.push("texto muy largo");
+  if (s.length > 2500) out.push("very long text");
   return out;
 }

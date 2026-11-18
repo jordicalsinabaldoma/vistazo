@@ -6,7 +6,7 @@ import { api, fmtDate } from "@/lib/client";
 import { kindsFor, kitFromHtml } from "@/lib/kit";
 import type { Ctx } from "./types";
 
-// ---------- Terminar revisión ----------
+// ---------- Finish review ----------
 
 type Kind = "approve" | "changes" | "comment";
 
@@ -24,9 +24,9 @@ export function FinishDialog({ open, ctx, onClose, onDone }: { open: boolean; ct
   const failing = items.filter((i) => r.checks[i.id]?.status === "fail").length;
 
   const options: [Kind, string, string][] = [
-    ["approve", "Aprobar", "Está bien así. Es una aprobación visual: no hace merge ni despliega."],
-    ["changes", "Pedir cambios", "Hay que corregir algo antes de darla por buena."],
-    ["comment", guest ? "Enviar comentarios" : "Solo comentar", "Dejas tus comentarios sin aprobar ni pedir cambios."],
+    ["approve", "Approve", "It looks good as it is. This is a visual approval: it does not merge or deploy."],
+    ["changes", "Request changes", "Something needs fixing before it is good to go."],
+    ["comment", guest ? "Send comments" : "Comment only", "You leave your comments without approving or requesting changes."],
   ];
 
   async function submit() {
@@ -44,9 +44,9 @@ export function FinishDialog({ open, ctx, onClose, onDone }: { open: boolean; ct
   }
 
   return (
-    <Sheet open={open} onClose={onClose} title={`Terminar tu revisión de la v${r.number}`} description="Así el equipo sabe que ya has terminado y qué le toca.">
+    <Sheet open={open} onClose={onClose} title={`Finish your review of v${r.number}`} description="So the team knows you are done and what comes next.">
       <fieldset className="grid gap-2">
-        <legend className="sr-only">Resultado</legend>
+        <legend className="sr-only">Outcome</legend>
         {options.map(([k, label, help]) => {
           const disabled = k !== "comment" && !canVerdict;
           return (
@@ -58,7 +58,7 @@ export function FinishDialog({ open, ctx, onClose, onDone }: { open: boolean; ct
               <span>
                 <span className="block font-medium">{label}</span>
                 <span className="block text-sm text-muted">
-                  {disabled ? (me.isAuthor ? "No puedes aprobar ni pedir cambios en tu propia revisión." : "Solo personas con cuenta en la app.") : help}
+                  {disabled ? (me.isAuthor ? "You cannot approve or request changes on your own review." : "Only people with an account in the app.") : help}
                 </span>
               </span>
             </label>
@@ -67,42 +67,42 @@ export function FinishDialog({ open, ctx, onClose, onDone }: { open: boolean; ct
       </fieldset>
       {kind === "approve" && (open_ > 0 || untested > 0) && (
         <p className="mt-3 rounded-lg bg-warnbg px-3 py-2 text-sm text-warn" role="status">
-          Ojo: {[open_ ? plural(open_, "comentario sigue abierto", "comentarios siguen abiertos") : "", untested ? `${plural(untested, "cosa", "cosas")} sin marcar como probada${untested === 1 ? "" : "s"}` : ""].filter(Boolean).join(" y ")}
-          {failing ? ` (${plural(failing, "falla", "fallan")})` : ""}. Puedes aprobar igualmente.
+          Heads up: {[open_ ? `${plural(open_, "comment is", "comments are")} still open` : "", untested ? `${plural(untested, "item is", "items are")} not marked as tested` : ""].filter(Boolean).join(" and ")}
+          {failing ? ` (${plural(failing, "fails", "fail")})` : ""}. You can approve anyway.
         </p>
       )}
       <label className="label mt-4" htmlFor="verdict-note">
-        Nota <span className="font-normal text-muted">(opcional)</span>
+        Note <span className="font-normal text-muted">(optional)</span>
       </label>
-      <textarea id="verdict-note" className="input" rows={3} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Un resumen para el equipo" />
+      <textarea id="verdict-note" className="input" rows={3} value={note} onChange={(e) => setNote(e.target.value)} placeholder="A summary for the team" />
       <div className="mt-3">
         <ErrorNote>{err}</ErrorNote>
       </div>
       <div className="mt-4 flex justify-end gap-2">
         <button className="btn btn-quiet" onClick={onClose}>
-          Seguir revisando
+          Keep reviewing
         </button>
         <button className="btn btn-primary" onClick={submit} disabled={busy} data-testid="submit-verdict">
-          {kind === "approve" ? "Aprobar" : kind === "changes" ? "Pedir cambios" : "Enviar"}
+          {kind === "approve" ? "Approve" : kind === "changes" ? "Request changes" : "Send"}
         </button>
       </div>
     </Sheet>
   );
 }
 
-// ---------- Compartir ----------
+// ---------- Share ----------
 
 type L = { id: string; label: string; revoked: boolean; active: boolean; createdAt: number; expiresAt?: number };
 
 export function ShareDialog({ open, ctx, onClose }: { open: boolean; ctx: Ctx; onClose: () => void }) {
   return (
-    <Sheet open={open} onClose={onClose} title="Compartir para revisar" description={`El enlace solo abre la revisión #${ctx.data.review.number}. Quien lo tenga puede probarla y comentar sin cuenta, pero no aprobar.`}>
+    <Sheet open={open} onClose={onClose} title="Share with guests" description={`The link only opens review #${ctx.data.review.number}. Anyone who has it can try it and comment without an account, but cannot approve.`}>
       <ShareBody ctx={ctx} />
     </Sheet>
   );
 }
 
-/** Se monta cada vez que se abre el diálogo: el enlace recién creado no sobrevive al cierre. */
+/** Mounted every time the dialog opens: a freshly created link does not survive closing it. */
 function ShareBody({ ctx }: { ctx: Ctx }) {
   const { review: rv, project: p, me } = ctx.data;
   const [links, setLinks] = useState<L[]>([]);
@@ -119,12 +119,12 @@ function ShareBody({ ctx }: { ctx: Ctx }) {
       <ErrorNote>{err}</ErrorNote>
       {url ? (
         <div className="rounded-xl border border-accent/50 bg-sunken p-3">
-          <p className="text-sm font-medium">Enlace creado. Cópialo ahora: no se vuelve a mostrar.</p>
+          <p className="text-sm font-medium">Link created. Copy it now: it will not be shown again.</p>
           <code data-testid="share-url" className="mt-2 block break-all font-mono text-xs">
             {url}
           </code>
           <div className="mt-2">
-            <CopyButton text={url} className="btn btn-primary btn-sm" label="Copiar enlace" />
+            <CopyButton text={url} className="btn btn-primary btn-sm" label="Copy link" />
           </div>
         </div>
       ) : (
@@ -145,33 +145,33 @@ function ShareBody({ ctx }: { ctx: Ctx }) {
         >
           <div>
             <label className="label" htmlFor="sl">
-              Para quién
+              Who is it for
             </label>
-            <input id="sl" name="label" required placeholder="Por ejemplo: Ana, diseñadora" className="input" />
+            <input id="sl" name="label" required placeholder="For example: Ana, designer" className="input" />
           </div>
           <div>
             <label className="label" htmlFor="sd">
-              Caduca
+              Expires
             </label>
             <select id="sd" name="days" className="input w-auto" defaultValue="14">
-              <option value="7">En 7 días</option>
-              <option value="14">En 14 días</option>
-              <option value="30">En 30 días</option>
-              <option value="">Nunca</option>
+              <option value="7">In 7 days</option>
+              <option value="14">In 14 days</option>
+              <option value="30">In 30 days</option>
+              <option value="">Never</option>
             </select>
           </div>
-          <button className="btn btn-primary">Crear enlace</button>
+          <button className="btn btn-primary">Create link</button>
         </form>
       )}
 
-      <h3 className="mt-6 text-sm font-semibold">Enlaces activos de esta revisión</h3>
+      <h3 className="mt-6 text-sm font-semibold">Active links for this review</h3>
       <ul className="mt-2 divide-y divide-line text-sm">
-        {active.length === 0 && <li className="py-2 text-muted">Ninguno.</li>}
+        {active.length === 0 && <li className="py-2 text-muted">None.</li>}
         {active.map((l) => (
           <li key={l.id} className="flex items-center gap-3 py-2">
             <span className="flex-1">
               {l.label}
-              <span className="block text-xs text-muted">{l.expiresAt ? `Caduca ${fmtDate(l.expiresAt)}` : "Sin caducidad"}</span>
+              <span className="block text-xs text-muted">{l.expiresAt ? `Expires ${fmtDate(l.expiresAt)}` : "Never expires"}</span>
             </span>
             <button
               className="btn btn-danger btn-sm"
@@ -180,39 +180,39 @@ function ShareBody({ ctx }: { ctx: Ctx }) {
                 load();
               }}
             >
-              Revocar
+              Revoke
             </button>
           </li>
         ))}
       </ul>
       <p className="mt-6 text-sm text-muted">
-        Para que alguien pueda <b className="font-medium text-ink">aprobar</b>, tiene que tener cuenta y estar en la app.{" "}
+        For someone to <b className="font-medium text-ink">approve</b>, they need an account and to be in the app.{" "}
         {me.can.manage ? (
-          <a className="font-medium text-accent-ink underline" href={`/p/${p.id}#ajustes`}>
-            Añádelo en Ajustes
+          <a className="font-medium text-accent-ink underline" href={`/p/${p.id}#settings`}>
+            Add them in Settings
           </a>
         ) : (
-          "Pídeselo a quien gestiona la app."
+          "Ask whoever manages the app."
         )}
       </p>
     </>
   );
 }
 
-// ---------- Editar revisión ----------
+// ---------- Edit review ----------
 
 type Item = { id?: string; title: string };
 type KitItem = { kind: string; name: string; code: string; detail: string };
 
 export function EditDialog({ open, ctx, onClose }: { open: boolean; ctx: Ctx; onClose: () => void }) {
   return (
-    <Sheet open={open} onClose={onClose} title={`Editar la revisión #${ctx.data.review.number}`}>
+    <Sheet open={open} onClose={onClose} title={`Edit review #${ctx.data.review.number}`}>
       <EditForm ctx={ctx} onClose={onClose} />
     </Sheet>
   );
 }
 
-/** Se monta al abrir: parte siempre de los datos actuales de la revisión. */
+/** Mounted on open: always starts from the current review data. */
 function EditForm({ ctx, onClose }: { ctx: Ctx; onClose: () => void }) {
   const rv = ctx.data.review;
   const [f, setF] = useState({ title: rv.title, purpose: rv.purpose, testData: rv.testData ?? "", branch: rv.branch ?? "", prUrl: rv.prUrl ?? "" });
@@ -228,14 +228,14 @@ function EditForm({ ctx, onClose }: { ctx: Ctx; onClose: () => void }) {
   const kitOut = () => {
     if (kitMode === "list") {
       const ls = labels.filter((l) => l.code.trim()).map((l) => ({ kind: l.kind, code: l.code.trim(), ...(l.name.trim() ? { name: l.name.trim() } : {}), ...(l.detail.trim() ? { detail: l.detail.trim() } : {}) }));
-      return ls.length ? { pages: [{ title: "Datos de prueba", rows: [{ labels: ls }] }] } : null;
+      return ls.length ? { pages: [{ title: "Test data", rows: [{ labels: ls }] }] } : null;
     }
     const t = kitJson.trim();
     if (!t) return null;
     try {
       return t.startsWith("<") ? kitFromHtml(t) : JSON.parse(t);
     } catch {
-      throw new Error("El kit no es un JSON válido (ni una página HTML con el bloque page-data).");
+      throw new Error("The kit is not valid JSON (nor an HTML page with a page-data block).");
     }
   };
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setF((x) => ({ ...x, [k]: e.target.value }));
@@ -251,50 +251,50 @@ function EditForm({ ctx, onClose }: { ctx: Ctx; onClose: () => void }) {
             onClose();
           } catch (e) {
             const er = e as Error & { status?: number };
-            setErr(er.message === "Datos no válidos" ? "Revisa los campos: el enlace a la PR tiene que empezar por https:// y el kit tiene que seguir el formato." : er.message);
+            setErr(er.message === "Invalid data" ? "Check the fields: the PR link must start with https:// and the kit must follow the format." : er.message);
           }
         }}
       >
         <div>
           <label className="label" htmlFor="e-title">
-            Título
+            Title
           </label>
           <input id="e-title" className="input" required value={f.title} onChange={set("title")} />
         </div>
         <div>
           <label className="label" htmlFor="e-purpose">
-            Qué cambia
+            What changed
           </label>
           <textarea id="e-purpose" className="input" rows={4} value={f.purpose} onChange={set("purpose")} />
         </div>
         <div>
-          <span className="label">Qué probar en esta revisión</span>
+          <span className="label">What to test in this review</span>
           <ul className="grid gap-2">
             {items.map((it, i) => (
               <li key={i} className="flex gap-2">
                 <input
                   className="input"
                   value={it.title}
-                  aria-label={`Qué probar ${i + 1}`}
+                  aria-label={`What to test ${i + 1}`}
                   onChange={(e) => setItems(items.map((x, j) => (j === i ? { ...x, title: e.target.value } : x)))}
                 />
                 <button type="button" className="btn btn-danger" onClick={() => setItems(items.filter((_, j) => j !== i))}>
-                  Quitar
+                  Remove
                 </button>
               </li>
             ))}
           </ul>
           <button type="button" className="btn btn-sm mt-2" onClick={() => setItems([...items, { title: "" }])}>
-            <Plus size={14} aria-hidden /> Añadir
+            <Plus size={14} aria-hidden /> Add
           </button>
-          <p className="hint">Los flujos críticos de la app se añaden solos.</p>
+          <p className="hint">The critical flows of the app are added automatically.</p>
         </div>
         <fieldset className="grid gap-2">
           <legend className="label flex w-full items-center justify-between">
-            Kit de prueba
+            Test kit
             <span className="segmented text-xs">
               <button type="button" aria-selected={kitMode === "list"} onClick={() => setKitMode("list")}>
-                Lista
+                List
               </button>
               <button
                 type="button"
@@ -320,17 +320,17 @@ function EditForm({ ctx, onClose }: { ctx: Ctx; onClose: () => void }) {
                   const up = (k: keyof KitItem) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setLabels(labels.map((x, j) => (j === i ? { ...x, [k]: e.target.value } : x)));
                   return (
                     <li key={i} className="grid gap-2 rounded-lg border border-line p-2 sm:grid-cols-[130px_1fr_1.3fr_auto]">
-                      <select className="input" value={l.kind} onChange={up("kind")} aria-label={`Tipo ${i + 1}`}>
+                      <select className="input" value={l.kind} onChange={up("kind")} aria-label={`Type ${i + 1}`}>
                         {kinds.map((k) => (
                           <option key={k.key} value={k.key}>
                             {k.name}
                           </option>
                         ))}
                       </select>
-                      <input className="input" value={l.name} onChange={up("name")} placeholder="Nombre (opcional)" aria-label={`Nombre ${i + 1}`} />
-                      <input className="input font-mono text-[13px]" value={l.code} onChange={up("code")} placeholder="Valor o código" aria-label={`Código ${i + 1}`} />
+                      <input className="input" value={l.name} onChange={up("name")} placeholder="Name (optional)" aria-label={`Name ${i + 1}`} />
+                      <input className="input font-mono text-[13px]" value={l.code} onChange={up("code")} placeholder="Value or code" aria-label={`Code ${i + 1}`} />
                       <button type="button" className="btn btn-danger" onClick={() => setLabels(labels.filter((_, j) => j !== i))}>
-                        Quitar
+                        Remove
                       </button>
                     </li>
                   );
@@ -338,7 +338,7 @@ function EditForm({ ctx, onClose }: { ctx: Ctx; onClose: () => void }) {
               </ul>
               <div>
                 <button type="button" className="btn btn-sm" onClick={() => setLabels([...labels, { kind: "user", name: "", code: "", detail: "" }])}>
-                  <Plus size={14} aria-hidden /> Añadir dato
+                  <Plus size={14} aria-hidden /> Add item
                 </button>
               </div>
             </>
@@ -349,28 +349,28 @@ function EditForm({ ctx, onClose }: { ctx: Ctx; onClose: () => void }) {
               value={kitJson}
               onChange={(e) => setKitJson(e.target.value)}
               placeholder='{"pages":[{"title":"…","rows":[{"title":"…","labels":[{"kind":"code","code":"ABC-123"}]}]}]}'
-              aria-label="Kit en JSON"
+              aria-label="Kit as JSON"
             />
           )}
-          <p className="hint">Cada dato se ve con su nombre y su QR se abre de uno en uno. En JSON puedes pegar el de una página de etiquetas, o la página HTML entera.</p>
+          <p className="hint">Each item shows its name, and QR codes open one at a time. In JSON you can paste the data of a label page, or the whole HTML page.</p>
         </fieldset>
         <div>
           <label className="label" htmlFor="e-data">
-            Notas de prueba
+            Test notes
           </label>
-          <textarea id="e-data" className="input font-mono text-[13px]" rows={2} value={f.testData} onChange={set("testData")} placeholder="Lo que no encaje en el kit: pasos previos, avisos…" />
-          <p className="hint">Solo datos de prueba. Nunca contraseñas ni datos reales.</p>
+          <textarea id="e-data" className="input font-mono text-[13px]" rows={2} value={f.testData} onChange={set("testData")} placeholder="Anything that does not fit in the kit: setup steps, warnings…" />
+          <p className="hint">Test data only. Never real passwords or real data.</p>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label className="label" htmlFor="e-branch">
-              Rama
+              Branch
             </label>
-            <input id="e-branch" className="input font-mono text-[13px]" value={f.branch} onChange={set("branch")} placeholder="feature/pago" />
+            <input id="e-branch" className="input font-mono text-[13px]" value={f.branch} onChange={set("branch")} placeholder="feature/checkout" />
           </div>
           <div>
             <label className="label" htmlFor="e-pr">
-              Enlace a la PR
+              PR link
             </label>
             <input id="e-pr" type="url" className="input" value={f.prUrl} onChange={set("prUrl")} placeholder="https://github.com/…/pull/42" />
           </div>
@@ -378,9 +378,9 @@ function EditForm({ ctx, onClose }: { ctx: Ctx; onClose: () => void }) {
         <ErrorNote>{err}</ErrorNote>
         <div className="flex justify-end gap-2">
           <button type="button" className="btn btn-quiet" onClick={onClose}>
-            Cancelar
+            Cancel
           </button>
-          <button className="btn btn-primary">Guardar</button>
+          <button className="btn btn-primary">Save</button>
         </div>
       </form>
   );

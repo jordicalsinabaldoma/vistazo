@@ -41,7 +41,7 @@ export const POST = handle(async (req: Request, { params }: Ctx) => {
   need(a, "comment");
   const b = schema.parse(await req.json());
   const an = b.anchor as Anchor;
-  // Lo que llega del navegador también es de terceros: sin caracteres invisibles.
+  // What comes from the browser is third-party data too: strip invisible characters.
   if (an.type === "live") {
     an.url = clean(an.url, 2000);
     if (an.selector) an.selector = clean(an.selector, 500);
@@ -52,7 +52,7 @@ export const POST = handle(async (req: Request, { params }: Ctx) => {
       .find((f) => f.key === an.flowKey)
       ?.steps.find((s) => s.key === an.stepKey)
       ?.assets.find((x) => x.id === an.assetId);
-    if (!asset) throw bad("La captura no pertenece a esta revisión");
+    if (!asset) throw bad("That screenshot does not belong to this review");
     an.pathname = asset.pathname;
   }
   const now = Date.now();
