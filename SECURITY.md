@@ -31,4 +31,8 @@ Interesa especialmente:
 - Sin correo: no hay recuperación de contraseña.
 - Los adjuntos no caducan.
 
+- Dependencias: `npm audit --omit=dev` sin avisos altos ni críticos. Quedan avisos moderados
+  en una cadena interna de `firebase-admin` (google-gax → rimraf → glob/minimatch) que no
+  recibe datos de usuarios.
+
 Detalle en `docs/PENDIENTE.md`.
