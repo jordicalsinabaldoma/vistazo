@@ -5,6 +5,7 @@ import type { Access } from "./auth";
 import { col, db } from "./db";
 import { latestVerdicts, stageLabel, stageOf, type Stage } from "./flow";
 import { bad, notFound } from "./http";
+import { kindsSchema, kitSchema, kitSize } from "./kit";
 import type { ApiKey, Comment, Project, Review, Revision, ShareLink, User, Verdict } from "./model";
 
 const key = z
@@ -53,7 +54,10 @@ export const publishSchema = z.object({
       z.object({
         kind: z.enum(["web", "qr", "deeplink", "download"]),
         label: z.string().max(120),
-        url: z.string().max(2000),
+        url: z
+          .string()
+          .max(2000)
+          .refine((u) => !/^\s*(javascript|data|vbscript|file|blob):/i.test(u), "Ese tipo de enlace no se admite"),
         instructions: z.string().max(2000).optional(),
       }),
     )
@@ -72,8 +76,17 @@ export const publishSchema = z.object({
       testData: z.string().max(4000).optional(),
       testPlan: checklistIn.optional(),
       prUrl: httpsUrl.optional().or(z.literal("").transform(() => undefined)),
+      testKit: kitSchema.optional(),
     })
     .default({}),
+  // Ajustes de presentación de la app que puede traer el agente desde vistazo.json.
+  // Solo cosméticos (plataforma y tipos de etiqueta): nada de permisos ni personas.
+  app: z
+    .object({
+      platform: z.enum(["web", "mobile", "desktop", "other"]).optional(),
+      kinds: kindsSchema.optional(),
+    })
+    .optional(),
   flows: z
     .array(
       z.object({
@@ -233,6 +246,7 @@ export async function publishRevision(a: Access, input: PublishInput) {
         purpose: ri.purpose ?? input.summary,
         testPlan: withIds(ri.testPlan ?? []),
         testData: ri.testData ?? "",
+        ...(ri.testKit ? { testKit: ri.testKit } : {}),
         branch: ri.branch || undefined,
         prUrl: ri.prUrl,
         status: "open",
@@ -248,12 +262,15 @@ export async function publishRevision(a: Access, input: PublishInput) {
       const upd: Partial<Review> = { versionCount: version, latestRevisionId: id, updatedAt: now, status: "open" };
       if (ri.prUrl) upd.prUrl = ri.prUrl;
       if (ri.testData !== undefined) upd.testData = ri.testData;
+      if (ri.testKit) upd.testKit = ri.testKit;
       if (ri.purpose !== undefined) upd.purpose = ri.purpose;
       if (ri.testPlan) upd.testPlan = withIds(ri.testPlan);
       tx.update(col.reviews().doc(rv!.id), { ...upd, closedAt: FieldValue.delete(), closedBy: FieldValue.delete() });
       Object.assign(rv!, upd);
       tx.update(projRef, { revisionCount: (p.revisionCount ?? 0) + 1 });
     }
+    if (input.app && (input.app.platform || input.app.kinds))
+      tx.update(projRef, { ...(input.app.platform ? { platform: input.app.platform } : {}), ...(input.app.kinds ? { kinds: input.app.kinds } : {}) });
     tx.set(col.revisions().doc(id), rev);
     return { revision: rev, review: rv!, created: isNew };
   });
@@ -313,10 +330,16 @@ export interface ReviewSummary {
   approvals: string[];
   updatedAt: number;
   submittedBy: string[]; // ids de quien ya terminó su revisión de la última versión
+  verdicts: { kind: Verdict["kind"]; name: string; authorKind: string }[];
+  screens: number;
+  tested: number;
+  toTest: number;
+  kit: number;
+  createdAt: number;
 }
 
 /** Resumen de las revisiones de una app (estado calculado sobre la última versión). */
-export async function summarizeReviews(projectId: string): Promise<ReviewSummary[]> {
+export async function summarizeReviews(projectId: string, projectChecklist?: number): Promise<ReviewSummary[]> {
   const [rs, cs] = await Promise.all([
     col.reviews().where("projectId", "==", projectId).get(),
     col.comments().where("projectId", "==", projectId).where("status", "==", "open").get(),
@@ -354,6 +377,12 @@ export async function summarizeReviews(projectId: string): Promise<ReviewSummary
         approvals: rev?.approvals.map((a) => a.name) ?? [],
         updatedAt: r.updatedAt,
         submittedBy: latestVerdicts(rev?.verdicts).map((v) => v.author.id ?? ""),
+        verdicts: latestVerdicts(rev?.verdicts).map((v) => ({ kind: v.kind, name: v.author.name, authorKind: v.author.kind })),
+        screens: rev ? rev.flows.reduce((n, f) => n + f.steps.length, 0) : 0,
+        tested: rev ? Object.values(rev.checks ?? {}).filter((c) => c.status === "ok").length : 0,
+        toTest: (r.testPlan?.length ?? 0) + (projectChecklist ?? 0),
+        kit: kitSize(r.testKit),
+        createdAt: r.createdAt,
       };
     })
     .sort((a, b) => (a.status === b.status ? b.updatedAt - a.updatedAt : a.status === "open" ? -1 : 1));

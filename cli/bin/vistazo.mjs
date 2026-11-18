@@ -4,11 +4,16 @@ import { readFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { parseArgs } from "node:util";
-import { capture, client, env, fromDir, gitBranch, latestRevision, loadConfig, prForBranch, publish } from "../lib/core.mjs";
+import { capture, client, env, fromDir, gitBranch, latestRevision, loadConfig, loadKit, prForBranch, publish } from "../lib/core.mjs";
 
 const HELP = `vistazo — revisión visual para quien programa con agentes
 
-Variables: VISTAZO_URL, VISTAZO_PROJECT, VISTAZO_API_KEY (clave de agente del proyecto)
+Variables: VISTAZO_API_KEY (clave de agente de la app; nunca en el repo).
+URL y app salen de VISTAZO_URL / VISTAZO_PROJECT o de vistazo.json en la raíz del repo:
+  { "url": "https://…", "project": "…", "platform": "web|mobile", "kit": "ruta o https://…",
+    "open": [{ "kind": "qr", "label": "Expo", "url": "exp+app://…" }],
+    "kinds": [{ "key": "pallet", "name": "Palé", "color": "orange", "icon": "stack" }],
+    "baseUrl": "…", "flows": [ … recorridos para --capture … ] }
 
   vistazo capture  --config vistazo.config.json [--live-url URL] [--out dir]
       Recorre los flujos con Playwright en TU máquina y deja capturas + vídeo + manifest.json.
@@ -17,11 +22,16 @@ Variables: VISTAZO_URL, VISTAZO_PROJECT, VISTAZO_API_KEY (clave de agente del pr
   vistazo publish  --title "…" [--summary "…" | --summary-file f.md] [--live-url URL]
                    [--config vistazo.config.json] [--capture | --assets dir]
                    [--branch rama | --review id] [--pr URL] [--test-data "…"]
-                   [--qr URL --qr-label "…"] [--meta clave=valor]...
+                   [--kit kit.json|etiquetas.html|https://…] [--shots dir]
+                   [--qr URL [--qr-label "…"]] [--deeplink URL] [--download URL]
+                   [--meta clave=valor]...
       Publica una versión. Va a la revisión abierta de la rama actual de git (o la
       crea); --review la manda a una revisión concreta. --capture recorre los flujos
       antes; --assets publica una carpeta ya hecha (manual, simulador, Appium,
-      Maestro…: <recorrido>__<paso>.png). Los comentarios abiertos de esa revisión
+      Maestro…: <recorrido>__<paso>.png; --shots es lo mismo). --kit adjunta el kit
+      de prueba (formato de página de etiquetas: su JSON o la página HTML entera).
+      --qr / --deeplink / --download: cómo abrir la versión en un móvil (QR de Expo
+      o Metro, enlace de EAS Update, TestFlight, APK…). Los comentarios abiertos de esa revisión
       pasan solos a la versión nueva. Sin --pr, si tienes gh, se enlaza la PR de la
       rama (solo se lee; no se sincroniza ningún estado).
 
@@ -44,6 +54,11 @@ const { values: o, positionals } = parseArgs({
     "live-url": { type: "string" },
     capture: { type: "boolean" },
     assets: { type: "string" },
+    shots: { type: "string" },
+    kit: { type: "string" },
+    deeplink: { type: "string" },
+    download: { type: "string" },
+    platform: { type: "string" },
     out: { type: "string" },
     qr: { type: "string" },
     "qr-label": { type: "string" },
@@ -67,6 +82,7 @@ async function main() {
 
   const e = env();
   const cfg = await loadConfig(o.config);
+  e.url ||= (cfg.url || "").replace(/\/$/, "");
   const project = e.project || cfg.project;
   const baseUrl = o["live-url"] || cfg.baseUrl;
 
@@ -87,19 +103,28 @@ async function main() {
       const out = o.out || path.join(os.tmpdir(), `vistazo-${Date.now()}`);
       log(`Capturando ${baseUrl} …`);
       flows = await capture(cfg, { baseUrl, outDir: out, log });
-    } else if (o.assets) {
-      flows = await fromDir(o.assets, cfg);
+    } else if (o.assets || o.shots) {
+      flows = await fromDir(o.assets || o.shots, cfg);
       origin = "external";
     }
     const summary = o["summary-file"] ? await readFile(o["summary-file"], "utf8") : o.summary || "";
-    const previews = o.qr ? [{ kind: "qr", label: o["qr-label"] || "Abrir en el dispositivo", url: o.qr }] : [];
+    const previews = [
+      ...(cfg.open || []),
+      ...(o.qr ? [{ kind: "qr", label: o["qr-label"] || "Abrir en el móvil", url: o.qr }] : []),
+      ...(o.deeplink ? [{ kind: "deeplink", label: "Deep link", url: o.deeplink }] : []),
+      ...(o.download ? [{ kind: "download", label: "Descargar la app", url: o.download }] : []),
+    ];
+    const testKit = await loadKit(o.kit || cfg.kit, o.kit ? process.cwd() : cfg._dir);
+    const platform = o.platform || cfg.platform;
+    const app = platform || cfg.kinds ? { ...(platform ? { platform } : {}), ...(cfg.kinds ? { kinds: cfg.kinds } : {}) } : undefined;
     const meta = Object.fromEntries((o.meta || []).map((m) => m.split(/=(.*)/s).slice(0, 2)));
     const branch = o.branch || gitBranch();
     const review = o.review
       ? { id: o.review }
-      : { branch, prUrl: o.pr || prForBranch(), testData: o["test-data"] };
+      : { branch, prUrl: o.pr || prForBranch(), testData: o["test-data"], testKit };
+    if (o.review && testKit) review.testKit = testKit;
     if (branch && !meta.rama) meta.rama = branch;
-    const r = await publish(api, project, { title: o.title, summary, liveUrl: baseUrl, previews, meta, flows, origin, review, log });
+    const r = await publish(api, project, { title: o.title, summary, liveUrl: baseUrl, previews, meta, flows, origin, review, app, log });
     log(
       r.review.created
         ? `✓ Revisión nueva #${r.review.number} «${r.review.title}» con su v1`

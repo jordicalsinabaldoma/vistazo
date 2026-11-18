@@ -4,6 +4,7 @@ import { col } from "@/lib/db";
 import { handle, ok } from "@/lib/http";
 import type { Revision } from "@/lib/model";
 import { reviewAccess } from "@/lib/revaccess";
+import { kitSchema } from "@/lib/kit";
 import { checklistIn, httpsUrl, withIds } from "@/lib/revisions";
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -26,6 +27,7 @@ const patch = z.object({
   purpose: z.string().max(20000).optional(),
   testData: z.string().max(4000).optional(),
   testPlan: checklistIn.optional(),
+  testKit: kitSchema.nullable().optional(),
   branch: z.string().trim().max(200).optional(),
   prUrl: httpsUrl.optional().or(z.literal("")),
   status: z.enum(["open", "closed"]).optional(),
@@ -40,6 +42,7 @@ export const PATCH = handle(async (req: Request, { params }: Ctx) => {
   for (const k of ["title", "purpose", "testData", "branch"] as const) if (b[k] !== undefined) upd[k] = b[k];
   if (b.prUrl !== undefined) upd.prUrl = b.prUrl || null;
   if (b.testPlan) upd.testPlan = withIds(b.testPlan);
+  if (b.testKit !== undefined) upd.testKit = b.testKit ?? null;
   if (b.status === "closed") Object.assign(upd, { status: "closed", closedAt: Date.now(), closedBy: a.author });
   if (b.status === "open") Object.assign(upd, { status: "open", closedAt: null, closedBy: null });
   await col.reviews().doc(id).update(upd);

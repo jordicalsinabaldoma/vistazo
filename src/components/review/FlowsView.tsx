@@ -5,14 +5,14 @@ import type { Comment, Step } from "@/lib/model";
 import AssetViewer from "./AssetViewer";
 import type { Ctx } from "./types";
 
-export default function FlowsView({ ctx }: { ctx: Ctx }) {
+export default function FlowsView({ ctx, initialFlow }: { ctx: Ctx; initialFlow?: string | null }) {
   const { revision } = ctx.data;
   const [sel, setSel] = useState(() => {
-    const f = revision.flows[0];
+    const f = revision.flows.find((x) => x.key === initialFlow) ?? revision.flows[0];
     return f ? `${f.key}/${f.steps[0]?.key ?? ""}` : "";
   });
   if (!revision.flows.length)
-    return <p className="card p-6 text-muted">Esta versión no tiene capturas. Pruébala en «En vivo».</p>;
+    return <p className="rounded-xl border border-dashed border-line p-8 text-center text-muted">Esta versión no trae capturas. Ábrela en «En vivo» o «En el móvil».</p>;
 
   const [fk, sk] = sel.split("/");
   const flow = revision.flows.find((f) => f.key === fk) ?? revision.flows[0];
@@ -23,8 +23,8 @@ export default function FlowsView({ ctx }: { ctx: Ctx }) {
     ).length;
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
-      <nav className="grid content-start gap-5 text-sm" aria-label="Pasos">
+    <div className="grid gap-6 lg:grid-cols-[230px_minmax(0,1fr)]">
+      <nav className="grid content-start gap-5 text-sm lg:sticky lg:top-[4.5rem]" aria-label="Pantallas">
         {revision.flows.map((f) => (
           <div key={f.key}>
             <p className="font-semibold">{f.title}</p>
@@ -38,9 +38,9 @@ export default function FlowsView({ ctx }: { ctx: Ctx }) {
                     <button
                       onClick={() => setSel(`${f.key}/${s.key}`)}
                       aria-current={active ? "step" : undefined}
-                      className={`flex min-h-9 w-full items-center gap-2 rounded-lg px-2 text-left ${active ? "bg-ink text-paper" : "hover:bg-ink/6"}`}
+                      className={`flex min-h-9 w-full items-center gap-2 rounded-lg border-l-2 px-2 text-left transition-colors ${active ? "border-accent bg-accent-soft font-medium text-ink" : "border-transparent hover:bg-ink/5"}`}
                     >
-                      <span className="w-4 text-xs opacity-70 tabular">{i + 1}</span>
+                      <span className="w-4 text-xs text-muted tabular">{i + 1}</span>
                       <span className="flex-1 truncate">{s.title}</span>
                       {n > 0 && (
                         <span className="chip bg-accent text-on-accent" aria-label={`${n} comentarios abiertos`}>
@@ -83,7 +83,7 @@ function StepView({ ctx, flowKey, step }: { ctx: Ctx; flowKey: string; step: Ste
           <AssetViewer key={a.id} ctx={ctx} asset={a} flowKey={flowKey} stepKey={step.key} stepTitle={step.title} />
         ))}
       </div>
-      {!step.assets.length && <p className="card p-6 text-sm text-muted">Este paso no tiene capturas. Pruébalo en «En vivo».</p>}
+      {!step.assets.length && <p className="rounded-xl border border-dashed border-line p-6 text-sm text-muted">Esta pantalla no trae captura. Pruébala en «En vivo» o «En el móvil».</p>}
 
       {carried.length > 0 && (
         <div className="mt-4 rounded-xl bg-warnbg p-3 text-sm">
@@ -127,14 +127,14 @@ function StepView({ ctx, flowKey, step }: { ctx: Ctx; flowKey: string; step: Ste
                 setWriting(false);
               }}
             >
-              <input autoFocus className="input" value={body} onChange={(e) => setBody(e.target.value)} placeholder="Comentario sobre el paso entero" aria-label="Comentario sobre el paso" />
+              <input autoFocus className="input" value={body} onChange={(e) => setBody(e.target.value)} placeholder="Comentario sobre la pantalla entera" aria-label="Comentario sobre la pantalla" />
               <button className="btn btn-strong" disabled={!body.trim()}>
                 Comentar
               </button>
             </form>
           ) : (
-            <button className="btn btn-sm mt-2" onClick={() => setWriting(true)}>
-              Comentar el paso entero
+            <button className="btn btn-quiet btn-sm mt-2 -ml-2 text-muted" onClick={() => setWriting(true)}>
+              Comentar la pantalla entera
             </button>
           ))}
       </div>

@@ -3,6 +3,7 @@ import { Plus } from "@phosphor-icons/react";
 import { useCallback, useEffect, useState } from "react";
 import { CopyButton, ErrorNote, Sheet, plural } from "@/components/ui";
 import { api, fmtDate } from "@/lib/client";
+import { kindsFor, kitFromHtml } from "@/lib/kit";
 import type { Ctx } from "./types";
 
 // ---------- Terminar revisión ----------
@@ -201,6 +202,7 @@ function ShareBody({ ctx }: { ctx: Ctx }) {
 // ---------- Editar revisión ----------
 
 type Item = { id?: string; title: string };
+type KitItem = { kind: string; name: string; code: string; detail: string };
 
 export function EditDialog({ open, ctx, onClose }: { open: boolean; ctx: Ctx; onClose: () => void }) {
   return (
@@ -216,6 +218,26 @@ function EditForm({ ctx, onClose }: { ctx: Ctx; onClose: () => void }) {
   const [f, setF] = useState({ title: rv.title, purpose: rv.purpose, testData: rv.testData ?? "", branch: rv.branch ?? "", prUrl: rv.prUrl ?? "" });
   const [items, setItems] = useState<Item[]>(rv.testPlan ?? []);
   const [err, setErr] = useState("");
+  const kit = rv.testKit;
+  const simple = !kit || (kit.pages.length <= 1 && (kit.pages[0]?.rows.length ?? 0) <= 1 && !kit.pages[0]?.rows[0]?.lead && !kit.pages[0]?.rows[0]?.labels.some((l) => l.products?.length) && !kit.url);
+  const [kitMode, setKitMode] = useState<"list" | "json">(simple ? "list" : "json");
+  const [labels, setLabels] = useState<KitItem[]>(() => (kit?.pages[0]?.rows[0]?.labels ?? []).map((l) => ({ kind: l.kind, name: l.name ?? "", code: l.code, detail: l.detail ?? "" })));
+  const [kitJson, setKitJson] = useState(() => (kit ? JSON.stringify(kit, null, 2) : ""));
+  const kinds = [...kindsFor(ctx.data.project.kinds).values()];
+
+  const kitOut = () => {
+    if (kitMode === "list") {
+      const ls = labels.filter((l) => l.code.trim()).map((l) => ({ kind: l.kind, code: l.code.trim(), ...(l.name.trim() ? { name: l.name.trim() } : {}), ...(l.detail.trim() ? { detail: l.detail.trim() } : {}) }));
+      return ls.length ? { pages: [{ title: "Datos de prueba", rows: [{ labels: ls }] }] } : null;
+    }
+    const t = kitJson.trim();
+    if (!t) return null;
+    try {
+      return t.startsWith("<") ? kitFromHtml(t) : JSON.parse(t);
+    } catch {
+      throw new Error("El kit no es un JSON válido (ni una página HTML con el bloque page-data).");
+    }
+  };
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setF((x) => ({ ...x, [k]: e.target.value }));
 
   return (
@@ -225,11 +247,11 @@ function EditForm({ ctx, onClose }: { ctx: Ctx; onClose: () => void }) {
           e.preventDefault();
           setErr("");
           try {
-            await api(`/api/reviews/${rv.id}`, { method: "PATCH", json: { ...f, testPlan: items.filter((i) => i.title.trim()) } });
+            await api(`/api/reviews/${rv.id}`, { method: "PATCH", json: { ...f, testPlan: items.filter((i) => i.title.trim()), testKit: kitOut() } });
             onClose();
           } catch (e) {
             const er = e as Error & { status?: number };
-            setErr(er.message === "Datos no válidos" ? "Revisa los campos: el enlace a la PR tiene que empezar por https://" : er.message);
+            setErr(er.message === "Datos no válidos" ? "Revisa los campos: el enlace a la PR tiene que empezar por https:// y el kit tiene que seguir el formato." : er.message);
           }
         }}
       >
@@ -267,11 +289,76 @@ function EditForm({ ctx, onClose }: { ctx: Ctx; onClose: () => void }) {
           </button>
           <p className="hint">Los flujos críticos de la app se añaden solos.</p>
         </div>
+        <fieldset className="grid gap-2">
+          <legend className="label flex w-full items-center justify-between">
+            Kit de prueba
+            <span className="segmented text-xs">
+              <button type="button" aria-selected={kitMode === "list"} onClick={() => setKitMode("list")}>
+                Lista
+              </button>
+              <button
+                type="button"
+                aria-selected={kitMode === "json"}
+                onClick={() => {
+                  if (kitMode === "list") {
+                    try {
+                      const k = kitOut();
+                      setKitJson(k ? JSON.stringify(k, null, 2) : "");
+                    } catch {}
+                  }
+                  setKitMode("json");
+                }}
+              >
+                JSON
+              </button>
+            </span>
+          </legend>
+          {kitMode === "list" ? (
+            <>
+              <ul className="grid gap-2">
+                {labels.map((l, i) => {
+                  const up = (k: keyof KitItem) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setLabels(labels.map((x, j) => (j === i ? { ...x, [k]: e.target.value } : x)));
+                  return (
+                    <li key={i} className="grid gap-2 rounded-lg border border-line p-2 sm:grid-cols-[130px_1fr_1.3fr_auto]">
+                      <select className="input" value={l.kind} onChange={up("kind")} aria-label={`Tipo ${i + 1}`}>
+                        {kinds.map((k) => (
+                          <option key={k.key} value={k.key}>
+                            {k.name}
+                          </option>
+                        ))}
+                      </select>
+                      <input className="input" value={l.name} onChange={up("name")} placeholder="Nombre (opcional)" aria-label={`Nombre ${i + 1}`} />
+                      <input className="input font-mono text-[13px]" value={l.code} onChange={up("code")} placeholder="Valor o código" aria-label={`Código ${i + 1}`} />
+                      <button type="button" className="btn btn-danger" onClick={() => setLabels(labels.filter((_, j) => j !== i))}>
+                        Quitar
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+              <div>
+                <button type="button" className="btn btn-sm" onClick={() => setLabels([...labels, { kind: "user", name: "", code: "", detail: "" }])}>
+                  <Plus size={14} aria-hidden /> Añadir dato
+                </button>
+              </div>
+            </>
+          ) : (
+            <textarea
+              className="input font-mono text-xs"
+              rows={8}
+              value={kitJson}
+              onChange={(e) => setKitJson(e.target.value)}
+              placeholder='{"pages":[{"title":"…","rows":[{"title":"…","labels":[{"kind":"code","code":"ABC-123"}]}]}]}'
+              aria-label="Kit en JSON"
+            />
+          )}
+          <p className="hint">Cada dato se ve con su nombre y su QR se abre de uno en uno. En JSON puedes pegar el de una página de etiquetas, o la página HTML entera.</p>
+        </fieldset>
         <div>
           <label className="label" htmlFor="e-data">
-            Datos de prueba
+            Notas de prueba
           </label>
-          <textarea id="e-data" className="input font-mono text-[13px]" rows={3} value={f.testData} onChange={set("testData")} placeholder="Usuario: cliente@ejemplo.test / contraseña de prueba" />
+          <textarea id="e-data" className="input font-mono text-[13px]" rows={2} value={f.testData} onChange={set("testData")} placeholder="Lo que no encaje en el kit: pasos previos, avisos…" />
           <p className="hint">Solo datos de prueba. Nunca contraseñas ni datos reales.</p>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">

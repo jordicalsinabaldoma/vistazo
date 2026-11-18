@@ -26,9 +26,14 @@ export function TestPlan({ ctx, compact }: { ctx: Ctx; compact?: boolean }) {
 
   return (
     <div>
-      <p className="mb-2 text-[13px] text-muted tabular" aria-live="polite">
-        {done} de {items.length} {items.length === 1 ? "probado" : "probados"} en la v{r.number}
-      </p>
+      <div className="mb-2 flex items-center gap-3">
+        <p className="text-[13px] text-muted tabular" aria-live="polite">
+          {done} de {items.length} {items.length === 1 ? "probado" : "probados"} en la v{r.number}
+        </p>
+        <span className="h-1.5 min-w-16 flex-1 overflow-hidden rounded-full bg-neutral" aria-hidden>
+          <span className="block h-full rounded-full bg-ok transition-[width]" style={{ width: `${(done / items.length) * 100}%` }} />
+        </span>
+      </div>
       <ul className={`grid ${compact ? "gap-1" : "gap-1.5"}`}>
         {items.map((i) => {
           const c = r.checks[i.id];

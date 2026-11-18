@@ -53,11 +53,50 @@ export async function upload(api, project, file, origin = "playwright", caption)
 }
 
 // ---------- Configuración ----------
+/**
+ * Configuración del repo: --config, o vistazo.json / vistazo.config.json en la carpeta
+ * actual o en la raíz de git. Sin secretos: la clave va en VISTAZO_API_KEY.
+ */
 export async function loadConfig(file) {
-  if (!file) return { flows: [] };
-  const cfg = JSON.parse(await readFile(file, "utf8"));
-  cfg.flows ||= [];
-  return cfg;
+  const tries = file ? [file] : ["vistazo.json", "vistazo.config.json"].flatMap((f) => [f, path.join(gitRoot() || ".", f)]);
+  for (const f of tries) {
+    try {
+      const cfg = JSON.parse(await readFile(f, "utf8"));
+      cfg.flows ||= [];
+      cfg._dir = path.dirname(path.resolve(f));
+      return cfg;
+    } catch (e) {
+      if (file) throw new Error(`No puedo leer ${file}: ${e.message}`);
+    }
+  }
+  return { flows: [], _dir: process.cwd() };
+}
+
+function gitRoot() {
+  try {
+    return execFileSync("git", ["rev-parse", "--show-toplevel"], { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
+  } catch {
+    return "";
+  }
+}
+
+/** Datos de la página de etiquetas: el bloque <script id="page-data"> de su HTML. */
+export function kitFromHtml(html) {
+  const m = /<script[^>]*id=["']page-data["'][^>]*>([\s\S]*?)<\/script>/i.exec(html);
+  if (!m) throw new Error("No encuentro el bloque page-data en el HTML del kit");
+  return JSON.parse(m[1]);
+}
+
+/**
+ * Kit de prueba: un JSON (formato de página de etiquetas), la propia página HTML, o un
+ * enlace https a una página ya publicada.
+ */
+export async function loadKit(ref, base = process.cwd()) {
+  if (!ref) return undefined;
+  if (/^https:\/\//.test(ref)) return { pages: [], url: ref };
+  const file = path.resolve(base, ref);
+  const text = await readFile(file, "utf8");
+  return /\.html?$/i.test(file) || text.trimStart().startsWith("<") ? kitFromHtml(text) : JSON.parse(text);
 }
 
 const sub = (v) => (typeof v === "string" ? v.replace(/\$\{env:([A-Z0-9_]+)\}/g, (_, n) => process.env[n] ?? "") : v);
@@ -215,7 +254,7 @@ export async function reviewForBranch(api, project, branch) {
  * `review`: { id } para una revisión concreta, o { branch, title, purpose, testData, prUrl }:
  * la versión va a la revisión abierta de esa rama, o crea una nueva.
  */
-export async function publish(api, project, { title, summary, liveUrl, previews, meta, flows, origin, review = {}, log = console.error }) {
+export async function publish(api, project, { title, summary, liveUrl, previews, meta, flows, origin, review = {}, app, log = console.error }) {
   const out = [];
   for (const f of flows) {
     const steps = [];
@@ -229,7 +268,7 @@ export async function publish(api, project, { title, summary, liveUrl, previews,
     }
     out.push({ key: f.key, title: f.title, description: f.description, steps });
   }
-  return api.post(`/api/projects/${project}/revisions`, { title, summary, liveUrl, previews, meta, flows: out, source: "agent", review });
+  return api.post(`/api/projects/${project}/revisions`, { title, summary, liveUrl, previews, meta, flows: out, source: "agent", review, ...(app ? { app } : {}) });
 }
 
 /**

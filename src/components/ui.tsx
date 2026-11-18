@@ -1,5 +1,5 @@
 "use client";
-import { Check, CheckCircle, Circle, Copy, GitPullRequest, X, XCircle } from "@phosphor-icons/react";
+import { Check, CheckCircle, Circle, Copy, DotsThree, GitPullRequest, X, XCircle } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import { CIRCUIT, circuitStep, stageTone, type Stage } from "@/lib/flow";
 
@@ -154,3 +154,163 @@ export function ErrorNote({ children }: { children: React.ReactNode }) {
 }
 
 export const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+
+const AVATAR = ["#c2410c", "#2f6b55", "#5b4fc4", "#1f5f99", "#8a5a00", "#9d174d", "#0f766e", "#4d5563"];
+
+/** Avatar con iniciales. El color sale del nombre, siempre el mismo para la misma persona. */
+export function Avatar({ name, kind, size = 24 }: { name: string; kind?: string; size?: number }) {
+  const ini =
+    kind === "agent"
+      ? "IA"
+      : name
+          .replace(/\(.*?\)/g, "")
+          .trim()
+          .split(/\s+/)
+          .slice(0, size < 22 ? 1 : 2)
+          .map((w) => w[0]?.toUpperCase() ?? "")
+          .join("") || "?";
+  let h = 0;
+  for (const c of name) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  const bg = kind === "agent" ? "var(--ink)" : AVATAR[h % AVATAR.length];
+  return (
+    <span
+      aria-hidden
+      className={`inline-flex shrink-0 items-center justify-center rounded-full font-semibold text-white select-none`}
+      style={{
+        width: size,
+        height: size,
+        fontSize: Math.max(9, size * 0.4),
+        background: bg,
+        color: kind === "agent" ? "var(--paper)" : "#fff",
+        ...(kind === "guest" ? { outline: "1.5px dashed var(--field)", outlineOffset: 1 } : {}),
+      }}
+    >
+      {ini}
+    </span>
+  );
+}
+
+/** «hace 3 h», «ayer», «10 nov». La fecha exacta va en el title. */
+export function Ago({ t }: { t: number }) {
+  const [now] = useState(() => Date.now());
+  const s = Math.max(0, (now - t) / 1000);
+  const txt =
+    s < 60
+      ? "ahora"
+      : s < 3600
+        ? `hace ${Math.floor(s / 60)} min`
+        : s < 86400
+          ? `hace ${Math.floor(s / 3600)} h`
+          : s < 172800
+            ? "ayer"
+            : s < 604800
+              ? `hace ${Math.floor(s / 86400)} días`
+              : new Date(t).toLocaleDateString("es-ES", { day: "numeric", month: "short" });
+  return (
+    <time dateTime={new Date(t).toISOString()} title={new Date(t).toLocaleString("es-ES")} suppressHydrationWarning>
+      {txt}
+    </time>
+  );
+}
+
+export type MenuItem = { label: string; on: () => void; icon?: React.ReactNode; danger?: boolean } | null | false;
+
+/** Menú «Más»: Esc cierra, clic fuera cierra. */
+export function MoreMenu({ items, label = "Más acciones", align = "right" }: { items: MenuItem[]; label?: string; align?: "left" | "right" }) {
+  const list = items.filter(Boolean) as Exclude<MenuItem, null | false>[];
+  const [open, setOpen] = useState(false);
+  if (!list.length) return null;
+  return (
+    <div className="relative">
+      <button className="btn px-2" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((v) => !v)} aria-label={label} title={label}>
+        <DotsThree size={20} weight="bold" aria-hidden />
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} aria-hidden />
+          <ul
+            role="menu"
+            className={`absolute top-full z-40 mt-1 grid min-w-60 rounded-xl border border-line bg-card p-1 shadow-[0_12px_32px_rgb(var(--shadow)/0.18)] ${align === "right" ? "right-0" : "left-0"}`}
+            onKeyDown={(e) => e.key === "Escape" && setOpen(false)}
+          >
+            {list.map((a) => (
+              <li key={a.label} role="none">
+                <button
+                  role="menuitem"
+                  className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm hover:bg-sunken ${a.danger ? "text-bad" : ""}`}
+                  onClick={() => {
+                    setOpen(false);
+                    a.on();
+                  }}
+                >
+                  {a.icon}
+                  {a.label}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+    </div>
+  );
+}
+
+/** Código QR generado en el navegador (nada sale a servicios externos). */
+export function QrImage({ value, size = 192, label }: { value: string; size?: number; label: string }) {
+  const [src, setSrc] = useState("");
+  useEffect(() => {
+    let alive = true;
+    import("qrcode").then((Q) => Q.toDataURL(value, { margin: 1, width: size * 2, errorCorrectionLevel: "M" }).then((u) => alive && setSrc(u)));
+    return () => {
+      alive = false;
+    };
+  }, [value, size]);
+  return (
+    <span className="inline-flex rounded-lg bg-white p-2" style={{ width: size + 16, height: size + 16 }}>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      {src ? <img src={src} alt={label} width={size} height={size} /> : <span className="h-full w-full animate-pulse rounded bg-neutral" />}
+    </span>
+  );
+}
+
+/** El circuito en vertical, para la barra lateral. */
+export function CircuitList({ stage, version }: { stage: Stage; version: number }) {
+  const cur = circuitStep(stage);
+  return (
+    <ol className="grid gap-0" aria-label="Circuito de la revisión">
+      {CIRCUIT.map((s, i) => {
+        const done = i < cur || stage === "closed";
+        const now = i === cur && stage !== "closed";
+        return (
+          <li key={s} className="relative flex items-center gap-2.5 py-1 text-sm" aria-current={now ? "step" : undefined}>
+            {i > 0 && <span aria-hidden className={`absolute left-[11px] -top-2 h-3 w-px ${done || now ? "bg-ink/40" : "bg-line"}`} />}
+            <span
+              className={`relative flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-xs font-semibold ${
+                done ? "border-ink bg-ink text-paper" : now ? "border-accent bg-accent text-on-accent" : "border-field/60 bg-card text-muted"
+              }`}
+            >
+              {done ? <Check size={13} weight="bold" aria-hidden /> : i + 1}
+            </span>
+            <span className={now ? "font-semibold text-ink" : done ? "text-ink" : "text-muted"}>
+              {s}
+              {s === "Corregir" && version > 1 && <span className="font-normal text-muted"> · v{version}</span>}
+            </span>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+/** Marca de la app: inicial sobre un color estable. */
+export function AppMark({ name, size = 36 }: { name: string; size?: number }) {
+  let h = 0;
+  for (const c of name) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  const hues = ["#c2410c", "#2f6b55", "#5b4fc4", "#1f5f99", "#8a5a00", "#9d174d"];
+  return (
+    <span aria-hidden className="inline-flex shrink-0 items-center justify-center rounded-lg font-semibold text-white" style={{ width: size, height: size, background: hues[h % hues.length], fontSize: size * 0.45 }}>
+      {name.trim()[0]?.toUpperCase()}
+    </span>
+  );
+}
+

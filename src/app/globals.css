@@ -9,47 +9,70 @@
  * Radios: controles 8px, superficies 12px, etiquetas y pines redondos.
  */
 :root {
-  --paper: #f4f4f1;
+  --paper: #f6f6f7;
   --card: #ffffff;
-  --sunken: #ecebe7;
-  --ink: #18181b;
-  --muted: #5d5e66;
-  --line: #e2e1dc;
-  --field: #8f8d86;
+  --sunken: #efeff1;
+  --ink: #121317;
+  --muted: #5b5e69;
+  --line: #e4e4e8;
+  --field: #8a8d97;
   --accent: #c2410c;
   --on-accent: #ffffff;
   --accent-ink: #9a3412;
+  --accent-soft: #fff1e8;
   --ok: #166534;
   --okbg: #dcfce7;
   --warn: #92400e;
   --warnbg: #fef3c7;
   --bad: #b91c1c;
   --badbg: #fee2e2;
-  --neutral: #e8e7e2;
-  --shadow: 24 24 27;
+  --info: #1d4ed8;
+  --infobg: #e0ecff;
+  --neutral: #e9e9ec;
+  --shadow: 18 19 23;
+  /* Tipos de etiqueta del kit de prueba */
+  --k-orange: #c2410c;
+  --k-green: #2f6b55;
+  --k-violet: #5b4fc4;
+  --k-blue: #1f5f99;
+  --k-ink: #121317;
+  --k-ochre: #8a5a00;
+  --k-grey: #646873;
+  --k-red: #b42318;
   color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --paper: #111113;
-    --card: #1a1a1d;
-    --sunken: #242428;
-    --ink: #ededef;
-    --muted: #a1a1aa;
-    --line: #2c2c31;
-    --field: #6b6b75;
+    --paper: #0e0f11;
+    --card: #17181b;
+    --sunken: #202125;
+    --ink: #ececef;
+    --muted: #a2a4ad;
+    --line: #2a2b30;
+    --field: #6c6e78;
     --accent: #fb923c;
     --on-accent: #1c0a02;
     --accent-ink: #fdba74;
+    --accent-soft: #2a1709;
     --ok: #86efac;
     --okbg: #12301f;
     --warn: #fcd34d;
     --warnbg: #34270a;
     --bad: #fca5a5;
     --badbg: #3b1515;
-    --neutral: #2a2a2f;
+    --info: #93c5fd;
+    --infobg: #132544;
+    --neutral: #26272c;
     --shadow: 0 0 0;
+    --k-orange: #f59e5b;
+    --k-green: #7fc4a8;
+    --k-violet: #ada4f5;
+    --k-blue: #7db4e6;
+    --k-ink: #ececef;
+    --k-ochre: #e0b25c;
+    --k-grey: #a2a4ad;
+    --k-red: #f08b80;
     color-scheme: dark;
   }
 }
@@ -72,6 +95,9 @@
   --color-bad: var(--bad);
   --color-badbg: var(--badbg);
   --color-neutral: var(--neutral);
+  --color-accent-soft: var(--accent-soft);
+  --color-info: var(--info);
+  --color-infobg: var(--infobg);
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 }
@@ -158,6 +184,35 @@ a {
   }
   .section-title {
     @apply text-base font-semibold text-ink;
+  }
+  /* Pestañas subrayadas (como las de una PR). */
+  .tabs {
+    @apply flex items-end gap-1 overflow-x-auto text-sm;
+    scrollbar-width: none;
+  }
+  .tabs > a,
+  .tabs > button {
+    @apply -mb-px inline-flex min-h-11 items-center gap-2 border-b-2 border-transparent px-3 font-medium whitespace-nowrap text-muted transition-colors hover:text-ink;
+  }
+  .tabs > [aria-selected="true"],
+  .tabs > [aria-current="page"] {
+    @apply border-accent text-ink;
+  }
+  .count {
+    @apply inline-flex min-w-5 items-center justify-center rounded-full bg-neutral px-1.5 text-xs leading-5 font-semibold text-ink tabular-nums;
+  }
+  /* Caja con cabecera, como los comentarios de una PR. */
+  .box {
+    @apply overflow-hidden rounded-xl border border-line bg-card;
+  }
+  .box-head {
+    @apply flex items-center gap-2 border-b border-line bg-sunken/60 px-4 py-2.5 text-sm;
+  }
+  .side-title {
+    @apply mb-2 flex items-center justify-between text-xs font-semibold text-muted;
+  }
+  .kind {
+    color: var(--k);
   }
 }
 

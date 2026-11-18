@@ -1,4 +1,5 @@
-import type { Anchor, Comment, Review, Revision, Verdict } from "@/lib/model";
+import type { KindDef } from "@/lib/kit";
+import type { Anchor, Comment, Platform, Review, Revision, Verdict } from "@/lib/model";
 
 export type Me = {
   role: string;
@@ -16,10 +17,23 @@ export type ReviewData = {
   previous: Revision | null;
   review: Review;
   latest: { id: string; number: number; verdicts: Verdict[]; openComments: number; openHere: number };
-  versions: { id: string; number: number; title: string; createdAt: number; approved: boolean }[];
+  versions: {
+    id: string;
+    number: number;
+    title: string;
+    summary: string;
+    createdAt: number;
+    approved: boolean;
+    verdicts: Verdict[];
+    publishedBy: Revision["publishedBy"];
+    source: Revision["source"];
+    meta: Record<string, string>;
+    screens: number;
+    live: boolean;
+  }[];
   comments: Comment[];
   shared: boolean;
-  project: { id: string; name: string; context: string; checklist: Check[] };
+  project: { id: string; name: string; context: string; checklist: Check[]; platform: Platform | null; kinds: KindDef[] };
   me: Me;
 };
 

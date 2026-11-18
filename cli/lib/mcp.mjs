@@ -6,10 +6,13 @@ import path from "node:path";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { capture, client, env, fromDir, gitBranch, latestRevision, loadConfig, prForBranch, publish } from "./core.mjs";
+import { capture, client, env, fromDir, gitBranch, latestRevision, loadConfig, loadKit, prForBranch, publish } from "./core.mjs";
 
 export async function serve() {
   const e = env();
+  const repo = await loadConfig();
+  e.url ||= (repo.url || "").replace(/\/$/, "");
+  e.project ||= repo.project || "";
   const api = client(e);
   const server = new McpServer({ name: "vistazo", version: "0.1.0" });
   const text = (t) => ({ content: [{ type: "text", text: t }] });
@@ -22,12 +25,17 @@ export async function serve() {
       title: z.string(),
       summary: z.string().optional().describe("Qué cambia y qué mirar"),
       liveUrl: z.string().optional(),
-      config: z.string().optional().describe("Ruta a vistazo.config.json"),
+      config: z.string().optional().describe("Ruta a la config (por defecto vistazo.json del repo)"),
       capture: z.boolean().optional(),
       assetsDir: z.string().optional(),
       branch: z.string().optional().describe("Rama: por defecto la actual de git"),
       prUrl: z.string().optional().describe("Enlace a la PR (por defecto, la de la rama si gh está disponible)"),
-      testData: z.string().optional().describe("Datos de prueba para quien revisa (nunca reales)"),
+      testData: z.string().optional().describe("Notas de prueba para quien revisa (nunca datos reales)"),
+      kit: z.string().optional().describe("Kit de prueba: ruta a un JSON con formato de página de etiquetas, la página HTML, o un https://"),
+      open: z
+        .array(z.object({ kind: z.enum(["qr", "deeplink", "download", "web"]), label: z.string(), url: z.string(), instructions: z.string().optional() }))
+        .optional()
+        .describe("Cómo abrir esta versión en un móvil: QR de Expo/Metro, EAS Update, deep link, TestFlight, APK…"),
     },
     async (a) => {
       const cfg = await loadConfig(a.config);
@@ -37,8 +45,10 @@ export async function serve() {
       if (a.capture) flows = await capture(cfg, { baseUrl, outDir: path.join(os.tmpdir(), `vistazo-${Date.now()}`), log });
       else if (a.assetsDir) flows = await fromDir(a.assetsDir, cfg);
       const branch = a.branch || gitBranch();
-      const review = { branch, prUrl: a.prUrl || prForBranch(), testData: a.testData };
-      const r = await publish(api, project, { title: a.title, summary: a.summary || "", liveUrl: baseUrl, previews: [], flows, origin: a.capture ? "playwright" : "external", review, meta: branch ? { rama: branch } : undefined, log });
+      const testKit = await loadKit(a.kit || cfg.kit, a.kit ? process.cwd() : cfg._dir);
+      const review = { branch, prUrl: a.prUrl || prForBranch(), testData: a.testData, testKit };
+      const app = cfg.platform || cfg.kinds ? { ...(cfg.platform ? { platform: cfg.platform } : {}), ...(cfg.kinds ? { kinds: cfg.kinds } : {}) } : undefined;
+      const r = await publish(api, project, { title: a.title, summary: a.summary || "", liveUrl: baseUrl, previews: [...(cfg.open || []), ...(a.open || [])], flows, app, origin: a.capture ? "playwright" : "external", review, meta: branch ? { rama: branch } : undefined, log });
       return text(`${r.review.created ? `Revisión nueva #${r.review.number}` : `v${r.number} de la revisión #${r.review.number}`}: ${r.url}${r.carried ? `. ${r.carried} comentario(s) abiertos siguen en esta versión` : ""}`);
     },
   );

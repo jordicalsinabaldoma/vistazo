@@ -16,12 +16,23 @@ Claro y oscuro, siguiendo al sistema. El color solo significa algo:
 | `bad` / `badbg` | Falla, revocar, errores | 5,3 / 8,5 |
 | `muted` | Texto secundario | ≥ 5,4 en cualquier fondo |
 | `field` | Borde de campos y botones | 3,3 (≥ 3:1 para controles) |
-| `ink`, `paper`, `card`, `sunken`, `line`, `neutral` | Neutros | |
+| `info` / `infobg` | Revisión abierta sin revisar (icono de la lista) | |
+| `accent-soft` | Selección suave (pantalla activa, filtro activo) | |
+| `ink`, `paper`, `card`, `sunken`, `line`, `neutral` | Neutros (grises fríos) | |
+| `--k-<color>` | Tipos de dato del kit: orange, green, violet, blue, ink, ochre, grey, red | |
 
 ## Estados de una revisión
 
 Etiqueta `StateLabel`, siempre igual: Pendiente (neutro), Con comentarios / Cambios
 pedidos (ámbar), Aprobada (verde), Cerrada (gris).
+
+## Estructura (inspirada en GitHub, sin copiarlo)
+
+- Cabecera de página en banda blanca con título, estado, meta y **pestañas subrayadas** (`.tabs`, con `.count`).
+- Cajas con cabecera (`.box`, `.box-head`) para descripción y pruebas; línea de tiempo con iconos en círculo.
+- Barra lateral de secciones pequeñas (`.side-title`) separadas por una línea.
+- Avatares con iniciales y color estable por nombre; el agente es «IA» en tinta; el invitado lleva borde discontinuo.
+- En móvil, todo en una columna; el siguiente paso sube arriba.
 
 ## Botones
 

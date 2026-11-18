@@ -1,6 +1,7 @@
 "use client";
 import { put } from "@vercel/blob/client";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- llamadas sin tipar en páginas antiguas
 export async function api<T = any>(path: string, init?: RequestInit & { json?: unknown }): Promise<T> {
   const res = await fetch(path, {
     ...init,

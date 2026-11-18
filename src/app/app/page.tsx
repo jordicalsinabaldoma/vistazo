@@ -3,7 +3,7 @@ import { ArrowRight, Plus } from "@phosphor-icons/react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import TopBar from "@/components/TopBar";
-import { ErrorNote, StateLabel, plural } from "@/components/ui";
+import { AppMark, ErrorNote, StateLabel, plural } from "@/components/ui";
 import { api } from "@/lib/client";
 import type { NextStep } from "@/lib/flow";
 import type { ReviewSummary } from "@/lib/revisions";
@@ -39,8 +39,8 @@ export default function Home() {
   return (
     <>
       <TopBar />
-      <main className="mx-auto grid w-full max-w-5xl gap-12 px-4 py-10">
-        <ErrorNote>{err}</ErrorNote>
+      <main className="mx-auto grid w-full max-w-[1120px] grid-cols-[minmax(0,1fr)] gap-10 px-4 py-10 lg:grid-cols-[minmax(0,1fr)_340px]">
+        {err && <div className="lg:col-span-2"><ErrorNote>{err}</ErrorNote></div>}
         <section aria-labelledby="toca">
           <h1 id="toca" className="text-2xl font-semibold tracking-tight">
             Te toca
@@ -57,6 +57,9 @@ export default function Home() {
                   href={`/r/${r.latestRevisionId}`}
                   className="card group flex flex-col gap-3 p-4 transition-colors hover:border-field sm:flex-row sm:items-center"
                 >
+                  <span className="hidden sm:block">
+                    <AppMark name={project.name} size={32} />
+                  </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                       <StateLabel stage={r.stage} label={r.stageLabel} />
@@ -79,9 +82,9 @@ export default function Home() {
           </ul>
         </section>
 
-        <section aria-labelledby="apps">
+        <section aria-labelledby="apps" className="lg:pt-1">
           <div className="flex items-end justify-between gap-4">
-            <h2 id="apps" className="text-lg font-semibold">
+            <h2 id="apps" className="text-base font-semibold">
               Tus apps
             </h2>
             <button className="btn btn-sm" onClick={() => setCreating((v) => !v)} aria-expanded={creating}>
@@ -89,7 +92,7 @@ export default function Home() {
             </button>
           </div>
           {creating && (
-            <form onSubmit={create} className="card mt-4 grid max-w-xl gap-4 p-5">
+            <form onSubmit={create} className="card mt-4 grid gap-4 p-5">
               <div>
                 <label className="label" htmlFor="pn">
                   Nombre
@@ -113,10 +116,14 @@ export default function Home() {
             {projects?.length === 0 && <li className="px-5 py-8 text-center text-sm text-muted">Aún no tienes apps. Crea una para publicar tu primera revisión.</li>}
             {projects?.map((p) => (
               <li key={p.id}>
-                <Link href={`/p/${p.id}`} className="flex items-center gap-3 px-5 py-4 transition-colors hover:bg-sunken/60">
-                  <span className="min-w-0 flex-1 truncate font-medium">{p.name}</span>
-                  <span className="text-sm text-muted">{p.reviewCount != null ? plural(p.reviewCount, "revisión", "revisiones") : ""}</span>
-                  <span className="chip bg-neutral text-muted">{ROLE[p.role] ?? p.role}</span>
+                <Link href={`/p/${p.id}`} className="flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-sunken/60">
+                  <AppMark name={p.name} size={32} />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-medium">{p.name}</span>
+                    <span className="block text-[13px] text-muted">
+                      {p.reviewCount != null ? plural(p.reviewCount, "revisión", "revisiones") : "Sin revisiones"} · {ROLE[p.role] ?? p.role}
+                    </span>
+                  </span>
                 </Link>
               </li>
             ))}

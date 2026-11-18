@@ -65,6 +65,13 @@ export default function CommentList({ ctx }: { ctx: Ctx }) {
 function General({ ctx }: { ctx: Ctx }) {
   const [body, setBody] = useState("");
   const [busy, setBusy] = useState(false);
+  const [open, setOpen] = useState(false);
+  if (!open)
+    return (
+      <button className="btn btn-sm mt-4" onClick={() => setOpen(true)}>
+        Comentario general
+      </button>
+    );
   return (
     <form
       className="mt-4 grid gap-2"
@@ -82,17 +89,22 @@ function General({ ctx }: { ctx: Ctx }) {
       <label htmlFor="general-comment" className="text-sm font-medium">
         Comentario general
       </label>
-      <textarea id="general-comment" className="input" rows={2} value={body} onChange={(e) => setBody(e.target.value)} placeholder="Algo que no está en un punto concreto" />
-      <div>
-        <button className="btn btn-sm" disabled={!body.trim() || busy}>
+      <textarea id="general-comment" autoFocus className="input" rows={2} value={body} onChange={(e) => setBody(e.target.value)} placeholder="Algo que no está en un punto concreto" />
+      <div className="flex gap-2">
+        <button className="btn btn-strong btn-sm" disabled={!body.trim() || busy}>
           Comentar
+        </button>
+        <button type="button" className="btn btn-quiet btn-sm" onClick={() => setOpen(false)}>
+          Cancelar
         </button>
       </div>
     </form>
   );
 }
 
-function Item({ c, ctx }: { c: Comment; ctx: Ctx }) {
+export const whereOf = where;
+
+export function Item({ c, ctx, bare }: { c: Comment; ctx: Ctx; bare?: boolean }) {
   const ref = useRef<HTMLLIElement>(null);
   const [reply, setReply] = useState("");
   const [err, setErr] = useState("");
@@ -121,7 +133,7 @@ function Item({ c, ctx }: { c: Comment; ctx: Ctx }) {
       ref={ref}
       id={`c-${c.id}`}
       data-testid="comment"
-      className={`rounded-xl border bg-card p-3 text-sm transition-colors ${focused ? "border-accent ring-2 ring-accent/20" : "border-line"} ${c.status === "resolved" ? "opacity-80" : ""}`}
+      className={`${bare ? "" : "rounded-xl border p-3"} bg-card text-sm transition-colors ${focused ? "border-accent ring-2 ring-accent/20" : "border-line"} ${c.status === "resolved" ? "opacity-80" : ""}`}
     >
       <button className="flex w-full items-start gap-2.5 text-left" onClick={() => ctx.setFocus(focused ? null : c.id)} aria-expanded={focused}>
         <span className={`pin !static !h-6 !w-6 !translate-x-0 !translate-y-0 shrink-0 ${c.status === "resolved" ? "pin-resolved" : ""}`} aria-hidden>

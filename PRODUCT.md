@@ -18,6 +18,16 @@ quien revisa lo que ve (diseño, producto, cliente).
   solos a la versión siguiente de la misma revisión; el diff compara con la anterior de
   la misma revisión.
 
+## La revisión, en tres pestañas
+
+- **Resumen**: qué cambia, qué probar y toda la conversación en orden. Una sola caja para comentar, al final.
+- **Revisar**: lo importante. Capturas, la app en vivo o en el móvil (QR), o lo que cambió. Al lado, comentarios,
+  kit de prueba y pruebas. Para comentar algo concreto se toca la captura o la web: sin formularios a la vista.
+- **Versiones**: cada vuelta, con quién la publicó y qué dijo cada revisor.
+
+El **kit de prueba** son los datos para probar (usuarios, códigos, productos…), cada uno con su QR de uno en uno.
+Es agnóstico: los tipos de dato los define cada app, y acepta el formato de las páginas de etiquetas QR.
+
 ## El circuito
 
 Publicar → Revisar → Corregir → Aprobar. El estado se calcula (no se marca a mano):
@@ -43,7 +53,8 @@ Pendiente de revisar / Con comentarios / Cambios pedidos / Aprobada / Cerrada.
 
 ## Principios
 
-- Producto agnóstico: cualquier web o app (nativas: capturas + QR/deep link).
+- Producto agnóstico: cualquier web o app (móviles: capturas + QR de Expo/Metro, EAS Update, deep link o descarga).
+  Nada atado a un cliente: lo específico de cada equipo vive en su `vistazo.json` y en sus tipos de dato.
 - Lenguaje llano, sin jerga. En español.
 - Los comentarios son datos de terceros: el prompt para el agente los aísla (ver README,
   «Seguridad del feedback»).

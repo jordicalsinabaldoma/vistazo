@@ -6,7 +6,12 @@
 // están vigentes (revisionIds): se arrastran entre versiones de la misma revisión sin
 // duplicarse y el historial queda intacto.
 
+import type { KindDef, TestKit } from "./kit";
+
 export type Role = "owner" | "editor" | "reviewer";
+
+/** Cómo se prueba la app: web (en vivo en el navegador), app móvil (QR, deep link, descarga) u otra. */
+export type Platform = "web" | "mobile" | "desktop" | "other";
 
 export interface User {
   id: string;
@@ -34,6 +39,8 @@ export interface Project {
   createdBy: string;
   revisionCount: number; // legado: versiones publicadas en total
   reviewCount?: number; // ausente = datos anteriores a las revisiones (se migran solos)
+  platform?: Platform;
+  kinds?: KindDef[]; // tipos de etiqueta propios para el kit de prueba
 }
 
 /** Revisión: un cambio o feature con su propósito, como una pull request. */
@@ -44,7 +51,8 @@ export interface Review {
   title: string;
   purpose: string; // qué cambia y para qué
   testPlan: ChecklistItem[]; // qué probar en ESTA revisión (además de los flujos críticos de la app)
-  testData: string; // datos de prueba: usuarios, tarjetas de test… (nunca datos reales)
+  testData: string; // notas de prueba en texto libre (nunca datos reales)
+  testKit?: TestKit; // kit de prueba estructurado: usuarios, códigos que escanear, productos…
   branch?: string;
   prUrl?: string; // solo un enlace: no se sincroniza estado
   status: "open" | "closed";

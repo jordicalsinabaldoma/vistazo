@@ -19,7 +19,20 @@ export const GET = handle(async (req: Request, { params }: Ctx) => {
   const versions = all.docs
     .map((d) => d.data() as Revision)
     .sort((x, y) => y.number - x.number)
-    .map((r) => ({ id: r.id, number: r.number, title: r.title, createdAt: r.createdAt, approved: r.approvals.length > 0 }));
+    .map((r) => ({
+      id: r.id,
+      number: r.number,
+      title: r.title,
+      summary: r.summary,
+      createdAt: r.createdAt,
+      approved: r.approvals.length > 0,
+      verdicts: r.verdicts ?? [],
+      publishedBy: r.publishedBy,
+      source: r.source,
+      meta: r.meta ?? {},
+      screens: r.flows.reduce((n, f) => n + f.steps.length, 0),
+      live: !!r.liveUrl,
+    }));
   const latest = versions[0]?.id === rev.id ? rev : ((await col.revisions().doc(versions[0].id).get()).data() as Revision);
   const latestOpen = latest.id === rev.id ? comments : await commentsFor(latest.id);
   return ok({
@@ -36,7 +49,7 @@ export const GET = handle(async (req: Request, { params }: Ctx) => {
     versions,
     comments,
     shared: isShared(p, review, links.docs.map((d) => d.data() as ShareLink)),
-    project: { id: p.id, name: p.name, context: p.context, checklist: p.checklist },
+    project: { id: p.id, name: p.name, context: p.context, checklist: p.checklist, platform: p.platform ?? null, kinds: p.kinds ?? [] },
     me: { role: a.role, name: a.author.name, id: a.author.id, kind: a.author.kind, can: a.can, isAuthor: a.author.kind === "user" && a.author.id === review.author.id },
   });
 });
