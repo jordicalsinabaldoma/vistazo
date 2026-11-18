@@ -12,7 +12,7 @@ export default function FlowsView({ ctx }: { ctx: Ctx }) {
     return f ? `${f.key}/${f.steps[0]?.key ?? ""}` : "";
   });
   if (!revision.flows.length)
-    return <p className="p-6 text-muted">Esta revisión no tiene recorridos con capturas. Usa la pestaña «En vivo».</p>;
+    return <p className="card p-6 text-muted">Esta versión no tiene capturas. Pruébala en «En vivo».</p>;
 
   const [fk, sk] = sel.split("/");
   const flow = revision.flows.find((f) => f.key === fk) ?? revision.flows[0];
@@ -23,8 +23,8 @@ export default function FlowsView({ ctx }: { ctx: Ctx }) {
     ).length;
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[240px_1fr]">
-      <nav className="grid content-start gap-4 text-sm">
+    <div className="grid gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
+      <nav className="grid content-start gap-5 text-sm" aria-label="Pasos">
         {revision.flows.map((f) => (
           <div key={f.key}>
             <p className="font-semibold">{f.title}</p>
@@ -37,11 +37,16 @@ export default function FlowsView({ ctx }: { ctx: Ctx }) {
                   <li key={s.key}>
                     <button
                       onClick={() => setSel(`${f.key}/${s.key}`)}
-                      className={`flex w-full items-center gap-2 rounded-md px-2 py-1 text-left ${active ? "bg-ink text-white" : "hover:bg-ink/5"}`}
+                      aria-current={active ? "step" : undefined}
+                      className={`flex min-h-9 w-full items-center gap-2 rounded-lg px-2 text-left ${active ? "bg-ink text-paper" : "hover:bg-ink/6"}`}
                     >
-                      <span className="w-4 font-mono text-[11px] opacity-60">{i + 1}</span>
+                      <span className="w-4 text-xs opacity-70 tabular">{i + 1}</span>
                       <span className="flex-1 truncate">{s.title}</span>
-                      {n > 0 && <span className="chip bg-accent text-white">{n}</span>}
+                      {n > 0 && (
+                        <span className="chip bg-accent text-on-accent" aria-label={`${n} comentarios abiertos`}>
+                          {n}
+                        </span>
+                      )}
                     </button>
                   </li>
                 );
@@ -70,33 +75,33 @@ function StepView({ ctx, flowKey, step }: { ctx: Ctx; flowKey: string; step: Ste
     <section className="min-w-0">
       <header className="mb-3 flex flex-wrap items-baseline gap-3">
         <h3 className="text-lg font-semibold">{step.title}</h3>
-        {step.url && <code className="truncate text-xs text-muted">{step.url}</code>}
+        {step.url && <code className="truncate font-mono text-xs text-muted">{step.url}</code>}
       </header>
       {step.notes && <p className="mb-3 text-sm text-muted">{step.notes}</p>}
       <div className={`grid max-w-5xl gap-4 ${step.assets.length > 1 ? "xl:grid-cols-2" : ""}`}>
         {step.assets.map((a) => (
-          <AssetViewer key={a.id} ctx={ctx} asset={a} flowKey={flowKey} stepKey={step.key} />
+          <AssetViewer key={a.id} ctx={ctx} asset={a} flowKey={flowKey} stepKey={step.key} stepTitle={step.title} />
         ))}
       </div>
-      {!step.assets.length && <p className="card p-6 text-sm text-muted">Paso sin capturas: pruébalo en la pestaña «En vivo».</p>}
+      {!step.assets.length && <p className="card p-6 text-sm text-muted">Este paso no tiene capturas. Pruébalo en «En vivo».</p>}
 
       {carried.length > 0 && (
-        <div className="mt-4 rounded-lg border border-warn/30 bg-warnbg p-3 text-sm">
-          <p className="font-medium text-warn">Pendientes arrastrados de versiones anteriores en este paso</p>
+        <div className="mt-4 rounded-xl bg-warnbg p-3 text-sm">
+          <p className="font-medium text-warn">Siguen abiertos de versiones anteriores en este paso</p>
           <ul className="mt-2 grid gap-2">
             {carried.map((c) => {
               const a = c.anchor as Extract<typeof c.anchor, { type: "asset" }>;
               return (
                 <li key={c.id} className="flex gap-3">
                   {a.pathname && (
-                    <a href={fileUrl(a.pathname)} target="_blank" className="relative block h-16 w-24 shrink-0 overflow-hidden rounded border border-line bg-card">
+                    <a href={fileUrl(a.pathname)} target="_blank" rel="noopener noreferrer" className="relative block h-16 w-24 shrink-0 overflow-hidden rounded-lg border border-line bg-card" aria-label={`Captura original del comentario ${ctx.numberOf(c)}`}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={fileUrl(a.pathname)} alt="" className="h-full w-full object-cover object-top" />
-                      <span className="pin !h-4 !w-4 !text-[9px]" style={{ left: `${a.x * 100}%`, top: `${a.y * 100}%` }} />
+                      <span className="pin !h-4 !w-4 !border" style={{ left: `${a.x * 100}%`, top: `${a.y * 100}%` }} />
                     </a>
                   )}
                   <button className="text-left" onClick={() => ctx.setFocus(c.id)}>
-                    <b>#{ctx.numberOf(c)}</b> {c.body} <span className="text-muted">— v{c.originRevisionNumber}</span>
+                    <b>#{ctx.numberOf(c)}</b> {c.body} <span className="text-muted">(v{c.originRevisionNumber})</span>
                   </button>
                 </li>
               );
@@ -122,14 +127,14 @@ function StepView({ ctx, flowKey, step }: { ctx: Ctx; flowKey: string; step: Ste
                 setWriting(false);
               }}
             >
-              <input autoFocus className="input" value={body} onChange={(e) => setBody(e.target.value)} placeholder="Comentario sobre el paso entero" />
-              <button className="btn btn-accent" disabled={!body.trim()}>
+              <input autoFocus className="input" value={body} onChange={(e) => setBody(e.target.value)} placeholder="Comentario sobre el paso entero" aria-label="Comentario sobre el paso" />
+              <button className="btn btn-strong" disabled={!body.trim()}>
                 Comentar
               </button>
             </form>
           ) : (
-            <button className="btn mt-2" onClick={() => setWriting(true)}>
-              Comentar el paso
+            <button className="btn btn-sm mt-2" onClick={() => setWriting(true)}>
+              Comentar el paso entero
             </button>
           ))}
       </div>

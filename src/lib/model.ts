@@ -1,7 +1,10 @@
 // Modelo de datos de Vistazo.
-// Proyecto → Revisión (versión numerada, inmutable salvo estado) → Recorrido → Paso → Adjuntos.
-// Los comentarios cuelgan del PROYECTO y llevan la lista de revisiones en las que
-// están vigentes (revisionIds): así se arrastran sin duplicarse y el historial queda intacto.
+// App (colección `projects`) → Revisión (colección `reviews`, como una PR: un cambio con
+// su propósito) → Versión (colección `revisions`, v1, v2… dentro de la revisión,
+// inmutable salvo veredictos y checks) → Recorrido → Paso → Adjuntos.
+// Los comentarios pertenecen a la REVISIÓN y llevan la lista de versiones en las que
+// están vigentes (revisionIds): se arrastran entre versiones de la misma revisión sin
+// duplicarse y el historial queda intacto.
 
 export type Role = "owner" | "editor" | "reviewer";
 
@@ -29,12 +32,35 @@ export interface Project {
   memberIds: string[];
   createdAt: number;
   createdBy: string;
-  revisionCount: number;
+  revisionCount: number; // legado: versiones publicadas en total
+  reviewCount?: number; // ausente = datos anteriores a las revisiones (se migran solos)
+}
+
+/** Revisión: un cambio o feature con su propósito, como una pull request. */
+export interface Review {
+  id: string;
+  projectId: string;
+  number: number; // #1, #2… dentro de la app
+  title: string;
+  purpose: string; // qué cambia y para qué
+  testPlan: ChecklistItem[]; // qué probar en ESTA revisión (además de los flujos críticos de la app)
+  testData: string; // datos de prueba: usuarios, tarjetas de test… (nunca datos reales)
+  branch?: string;
+  prUrl?: string; // solo un enlace: no se sincroniza estado
+  status: "open" | "closed";
+  closedAt?: number;
+  closedBy?: Author;
+  author: { id: string; name: string }; // usuario responsable (si publica un agente, quien creó su clave)
+  versionCount: number;
+  latestRevisionId: string;
+  createdAt: number;
+  updatedAt: number;
 }
 
 export interface ShareLink {
   id: string;
   projectId: string;
+  reviewId?: string; // si está, el enlace solo abre esa revisión
   tokenHash: string;
   label: string;
   revoked: boolean;
@@ -98,6 +124,14 @@ export interface Approval {
   note?: string;
 }
 
+/** Resultado de «Terminar revisión». Cuenta el último de cada persona en cada versión. */
+export interface Verdict {
+  kind: "approve" | "changes" | "comment";
+  author: Author;
+  at: number;
+  note?: string;
+}
+
 export interface CheckResult {
   status: "ok" | "fail" | "pending";
   by: string;
@@ -108,7 +142,8 @@ export interface CheckResult {
 export interface Revision {
   id: string;
   projectId: string;
-  number: number;
+  reviewId: string;
+  number: number; // número de versión DENTRO de la revisión (v1, v2…)
   title: string;
   summary: string; // contexto de esta versión (qué cambia, qué mirar)
   liveUrl?: string;
@@ -118,7 +153,8 @@ export interface Revision {
   publishedBy: { id: string; name: string; via: "user" | "apikey" };
   createdAt: number;
   previousRevisionId?: string;
-  approvals: Approval[];
+  approvals: Approval[]; // derivado de verdicts (último «approve» vigente de cada usuario)
+  verdicts?: Verdict[];
   checks: Record<string, CheckResult>; // checklistItemId → resultado
   meta?: Record<string, string>; // libre: rama, commit, PR, runtimeVersion…
 }
@@ -163,6 +199,7 @@ export interface CommentEvent {
 export interface Comment {
   id: string;
   projectId: string;
+  reviewId: string;
   originRevisionId: string;
   originRevisionNumber: number;
   revisionIds: string[]; // revisiones en las que está vigente

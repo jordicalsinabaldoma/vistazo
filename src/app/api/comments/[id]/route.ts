@@ -1,7 +1,8 @@
 import { FieldValue } from "firebase-admin/firestore";
 import { nanoid } from "nanoid";
 import { z } from "zod";
-import { access, need } from "@/lib/auth";
+import { access, need, needScope } from "@/lib/auth";
+import { clean } from "@/lib/untrusted";
 import { col } from "@/lib/db";
 import { handle, notFound, ok } from "@/lib/http";
 import type { Comment } from "@/lib/model";
@@ -21,9 +22,10 @@ export const POST = handle(async (req: Request, { params }: Ctx) => {
   if (!snap.exists) throw notFound("Comentario no encontrado");
   const c = snap.data() as Comment;
   const a = await access(req, c.projectId);
+  if (c.reviewId) needScope(a, c.reviewId);
   const b = schema.parse(await req.json());
   const now = Date.now();
-  const reply = (body: string) => ({ id: nanoid(8), body, author: a.author, at: now });
+  const reply = (body: string) => ({ id: nanoid(8), body: clean(body), author: a.author, at: now });
 
   if (b.action === "reply") {
     need(a, "comment");

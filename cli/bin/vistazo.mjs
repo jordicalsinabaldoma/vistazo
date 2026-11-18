@@ -4,7 +4,7 @@ import { readFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { parseArgs } from "node:util";
-import { capture, client, env, fromDir, latestRevision, loadConfig, publish } from "../lib/core.mjs";
+import { capture, client, env, fromDir, gitBranch, latestRevision, loadConfig, prForBranch, publish } from "../lib/core.mjs";
 
 const HELP = `vistazo — revisión visual para quien programa con agentes
 
@@ -16,15 +16,21 @@ Variables: VISTAZO_URL, VISTAZO_PROJECT, VISTAZO_API_KEY (clave de agente del pr
 
   vistazo publish  --title "…" [--summary "…" | --summary-file f.md] [--live-url URL]
                    [--config vistazo.config.json] [--capture | --assets dir]
+                   [--branch rama | --review id] [--pr URL] [--test-data "…"]
                    [--qr URL --qr-label "…"] [--meta clave=valor]...
-      Publica una revisión. --capture recorre los flujos antes; --assets publica una
-      carpeta ya hecha (manual, simulador, Appium, Maestro…: <recorrido>__<paso>.png).
-      Los comentarios pendientes de la versión anterior se arrastran solos.
+      Publica una versión. Va a la revisión abierta de la rama actual de git (o la
+      crea); --review la manda a una revisión concreta. --capture recorre los flujos
+      antes; --assets publica una carpeta ya hecha (manual, simulador, Appium,
+      Maestro…: <recorrido>__<paso>.png). Los comentarios abiertos de esa revisión
+      pasan solos a la versión nueva. Sin --pr, si tienes gh, se enlaza la PR de la
+      rama (solo se lee; no se sincroniza ningún estado).
 
-  vistazo feedback [latest|<idRevisión>] [--json | --summary]
-      Prompt recomendado (por defecto), comentario-resumen o JSON estructurado.
+  vistazo feedback [<idVersión>] [--json]
+      Prompt para tu agente (por defecto) o JSON, de la revisión de tu rama. Los
+      comentarios que parecen instrucciones para un agente se apartan; revísalos en
+      la web. El resumen para personas solo está en la web.
 
-  vistazo revisions        Lista las revisiones del proyecto.
+  vistazo reviews          Lista las revisiones de la app.
   vistazo mcp              Servidor MCP por stdio (para Claude Code, Cursor…).
 `;
 
@@ -42,8 +48,11 @@ const { values: o, positionals } = parseArgs({
     qr: { type: "string" },
     "qr-label": { type: "string" },
     meta: { type: "string", multiple: true },
+    branch: { type: "string" },
+    review: { type: "string" },
+    pr: { type: "string" },
+    "test-data": { type: "string" },
     json: { type: "boolean" },
-    summaryOnly: { type: "boolean" },
     help: { type: "boolean", short: "h" },
   },
   strict: false,
@@ -85,20 +94,30 @@ async function main() {
     const summary = o["summary-file"] ? await readFile(o["summary-file"], "utf8") : o.summary || "";
     const previews = o.qr ? [{ kind: "qr", label: o["qr-label"] || "Abrir en el dispositivo", url: o.qr }] : [];
     const meta = Object.fromEntries((o.meta || []).map((m) => m.split(/=(.*)/s).slice(0, 2)));
-    const r = await publish(api, project, { title: o.title, summary, liveUrl: baseUrl, previews, meta, flows, origin, log });
-    log(`✓ Publicada v${r.number}${r.carried ? ` (${r.carried} comentario(s) pendiente(s) arrastrado(s))` : ""}`);
+    const branch = o.branch || gitBranch();
+    const review = o.review
+      ? { id: o.review }
+      : { branch, prUrl: o.pr || prForBranch(), testData: o["test-data"] };
+    if (branch && !meta.rama) meta.rama = branch;
+    const r = await publish(api, project, { title: o.title, summary, liveUrl: baseUrl, previews, meta, flows, origin, review, log });
+    log(
+      r.review.created
+        ? `✓ Revisión nueva #${r.review.number} «${r.review.title}» con su v1`
+        : `✓ v${r.number} en la revisión #${r.review.number}${r.carried ? ` (${r.carried} comentario(s) abiertos siguen en esta versión)` : ""}`,
+    );
     return console.log(r.url);
   }
 
   if (cmd === "feedback") {
-    const id = !arg || arg === "latest" ? await latestRevision(api, project) : arg;
+    const id = !arg || arg === "latest" ? await latestRevision(api, project, o.branch || gitBranch()) : arg;
     const fb = await api.get(`/api/revisions/${id}/feedback`);
-    return console.log(o.json ? JSON.stringify(fb.json, null, 2) : o.summaryOnly || process.argv.includes("--summary") ? fb.summary : fb.prompt);
+    if (fb.flagged?.length) log(`⚠ ${fb.flagged.length} comentario(s) apartado(s) por parecer instrucciones para un agente. Revísalos en la web.`);
+    return console.log(o.json ? JSON.stringify(fb.json, null, 2) : fb.prompt);
   }
 
-  if (cmd === "revisions") {
-    const { revisions } = await api.get(`/api/projects/${project}/revisions`);
-    for (const r of revisions) console.log(`v${r.number}\t${r.approved ? "✓" : " "}\t${r.id}\t${r.title}`);
+  if (cmd === "reviews" || cmd === "revisions") {
+    const { reviews } = await api.get(`/api/projects/${project}/reviews`);
+    for (const r of reviews) console.log(`#${r.number}\tv${r.version}\t${r.stageLabel}\t${r.branch ?? "-"}\t${r.title}`);
     return;
   }
   console.log(HELP);

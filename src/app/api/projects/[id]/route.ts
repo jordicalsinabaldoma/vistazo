@@ -3,34 +3,17 @@ import { z } from "zod";
 import { access, need } from "@/lib/auth";
 import { col } from "@/lib/db";
 import { handle, ok } from "@/lib/http";
-import type { Comment, Revision, User } from "@/lib/model";
+import type { User } from "@/lib/model";
+import { ensureMigrated, summarizeReviews } from "@/lib/revisions";
 
 type Ctx = { params: Promise<{ id: string }> };
 
 export const GET = handle(async (req: Request, { params }: Ctx) => {
   const { id } = await params;
+  await ensureMigrated(id);
   const a = await access(req, id);
-  const [revSnap, comSnap] = await Promise.all([
-    col.revisions().where("projectId", "==", id).get(),
-    col.comments().where("projectId", "==", id).get(),
-  ]);
-  const comments = comSnap.docs.map((d) => d.data() as Comment);
-  const revisions = revSnap.docs
-    .map((d) => d.data() as Revision)
-    .sort((x, y) => y.number - x.number)
-    .map((r) => ({
-      id: r.id,
-      number: r.number,
-      title: r.title,
-      source: r.source,
-      createdAt: r.createdAt,
-      publishedBy: r.publishedBy.name,
-      approvals: r.approvals.map((x) => x.name),
-      flows: r.flows.length,
-      captures: r.flows.reduce((n, f) => n + f.steps.reduce((m, s) => m + s.assets.length, 0), 0),
-      open: comments.filter((c) => c.status === "open" && c.revisionIds.includes(r.id)).length,
-      total: comments.filter((c) => c.revisionIds.includes(r.id)).length,
-    }));
+  let reviews = await summarizeReviews(id);
+  if (a.scope) reviews = reviews.filter((r) => r.id === a.scope);
   let members: { id: string; name: string; email: string; role: string }[] = [];
   if (a.role !== "guest" && a.role !== "agent") {
     const users = await Promise.all(a.project.memberIds.map((u) => col.users().doc(u).get()));
@@ -41,10 +24,10 @@ export const GET = handle(async (req: Request, { params }: Ctx) => {
   }
   const p = a.project;
   return ok({
-    project: { id: p.id, name: p.name, context: p.context, checklist: p.checklist, revisionCount: p.revisionCount },
+    project: { id: p.id, name: p.name, context: p.context, checklist: p.checklist },
     members,
-    revisions,
-    me: { role: a.role, name: a.author.name, can: a.can },
+    reviews,
+    me: { id: a.author.id, kind: a.author.kind, role: a.role, name: a.author.name, can: a.can },
   });
 });
 
@@ -55,7 +38,7 @@ const patch = z.object({
     .array(
       z.object({
         id: z.string().max(40).optional(),
-        title: z.string().min(1).max(200),
+        title: z.string().trim().min(1).max(200),
         description: z.string().max(1000).optional(),
         flowKey: z.string().max(60).optional(),
       }),

@@ -8,7 +8,7 @@ type Ctx = { params: Promise<{ id: string; linkId: string }> };
 export const DELETE = handle(async (req: Request, { params }: Ctx) => {
   const { id, linkId } = await params;
   const a = await access(req, id);
-  need(a, "manage");
+  need(a, "publish"); // propietario o editor
   const ref = col.links().doc(linkId);
   const s = await ref.get();
   if (!s.exists || s.data()!.projectId !== id) throw notFound();

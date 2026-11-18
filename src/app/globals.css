@@ -1,58 +1,188 @@
 @import "tailwindcss";
 
+/*
+ * Sistema visual de Vistazo (ver DESIGN.md).
+ * Colores como tokens con modo claro y oscuro (sigue al sistema). Contraste AA
+ * comprobado: texto secundario ≥ 5:1, bordes de campos ≥ 3:1, botón principal ≥ 5:1.
+ * El color solo significa algo: naranja = acción principal y pines; ámbar = te toca
+ * corregir; verde = aprobado; rojo = falla o peligro. Todo lo demás es neutro.
+ * Radios: controles 8px, superficies 12px, etiquetas y pines redondos.
+ */
+:root {
+  --paper: #f4f4f1;
+  --card: #ffffff;
+  --sunken: #ecebe7;
+  --ink: #18181b;
+  --muted: #5d5e66;
+  --line: #e2e1dc;
+  --field: #8f8d86;
+  --accent: #c2410c;
+  --on-accent: #ffffff;
+  --accent-ink: #9a3412;
+  --ok: #166534;
+  --okbg: #dcfce7;
+  --warn: #92400e;
+  --warnbg: #fef3c7;
+  --bad: #b91c1c;
+  --badbg: #fee2e2;
+  --neutral: #e8e7e2;
+  --shadow: 24 24 27;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #111113;
+    --card: #1a1a1d;
+    --sunken: #242428;
+    --ink: #ededef;
+    --muted: #a1a1aa;
+    --line: #2c2c31;
+    --field: #6b6b75;
+    --accent: #fb923c;
+    --on-accent: #1c0a02;
+    --accent-ink: #fdba74;
+    --ok: #86efac;
+    --okbg: #12301f;
+    --warn: #fcd34d;
+    --warnbg: #34270a;
+    --bad: #fca5a5;
+    --badbg: #3b1515;
+    --neutral: #2a2a2f;
+    --shadow: 0 0 0;
+    color-scheme: dark;
+  }
+}
+
 @theme inline {
-  --color-paper: #f5f4f0;
-  --color-card: #ffffff;
-  --color-ink: #17181c;
-  --color-muted: #6b6d75;
-  --color-line: #e3e1db;
-  --color-accent: #ff5b1f;
-  --color-accent-ink: #b8380a;
-  --color-ok: #127a4a;
-  --color-okbg: #e3f4ea;
-  --color-warn: #a35d00;
-  --color-warnbg: #fdf0d8;
-  --color-bad: #b42318;
-  --color-badbg: #fde8e6;
+  --color-paper: var(--paper);
+  --color-card: var(--card);
+  --color-sunken: var(--sunken);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-field: var(--field);
+  --color-accent: var(--accent);
+  --color-on-accent: var(--on-accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-ok: var(--ok);
+  --color-okbg: var(--okbg);
+  --color-warn: var(--warn);
+  --color-warnbg: var(--warnbg);
+  --color-bad: var(--bad);
+  --color-badbg: var(--badbg);
+  --color-neutral: var(--neutral);
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 }
 
 body {
-  background: var(--color-paper);
-  color: var(--color-ink);
+  background: var(--paper);
+  color: var(--ink);
   font-family: var(--font-sans);
+  font-feature-settings: "ss01";
+}
+
+::selection {
+  background: color-mix(in srgb, var(--accent) 28%, transparent);
+}
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+a {
+  text-underline-offset: 3px;
+}
+.tabular {
+  font-variant-numeric: tabular-nums;
 }
 
 @layer components {
-.btn {
-  @apply inline-flex items-center justify-center gap-1.5 rounded-md border border-line bg-card px-3 py-1.5 text-sm font-medium text-ink transition hover:border-ink/40 disabled:opacity-50 disabled:pointer-events-none;
+  .btn {
+    @apply inline-flex min-h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-field/60 bg-card px-3 text-sm font-medium whitespace-nowrap text-ink transition-[background-color,border-color,transform] duration-150 select-none hover:border-ink/50 active:translate-y-px disabled:pointer-events-none disabled:opacity-50;
+  }
+  /* Acción principal: una por pantalla. */
+  .btn-primary {
+    @apply border-accent bg-accent text-on-accent hover:border-accent hover:brightness-110;
+  }
+  /* Acción fuerte dentro de una herramienta (no compite con la principal). */
+  .btn-strong {
+    @apply border-ink bg-ink text-paper hover:border-ink hover:bg-ink/85;
+  }
+  .btn-quiet {
+    @apply border-transparent bg-transparent hover:border-transparent hover:bg-ink/6;
+  }
+  .btn-danger {
+    @apply border-transparent bg-transparent text-bad hover:border-transparent hover:bg-badbg;
+  }
+  .btn-sm {
+    @apply min-h-8 px-2.5 text-[13px];
+  }
+  .input {
+    @apply w-full rounded-lg border border-field/70 bg-card px-3 py-2 text-sm text-ink outline-none placeholder:text-muted focus:border-accent focus:ring-2 focus:ring-accent/20 disabled:bg-sunken disabled:text-muted;
+  }
+  .label {
+    @apply mb-1.5 block text-sm font-medium text-ink;
+  }
+  .hint {
+    @apply mt-1 text-[13px] text-muted;
+  }
+  .card {
+    @apply rounded-xl border border-line bg-card;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap;
+  }
+  .segmented {
+    @apply inline-flex rounded-lg border border-line bg-sunken p-0.5 text-sm;
+  }
+  .segmented > button,
+  .segmented > a {
+    @apply inline-flex min-h-8 items-center gap-1.5 rounded-md px-3 font-medium whitespace-nowrap text-muted transition-colors hover:text-ink;
+  }
+  .segmented > [aria-selected="true"],
+  .segmented > [aria-current="page"] {
+    @apply bg-card text-ink shadow-[0_1px_2px_rgb(var(--shadow)/0.12)];
+  }
+  /* Pin numerado sobre capturas y web en vivo. Área táctil de 40px con ::after. */
+  .pin {
+    @apply absolute flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-white bg-accent text-xs font-bold text-on-accent shadow-[0_2px_6px_rgb(0_0_0/0.35)];
+  }
+  .pin::after {
+    content: "";
+    position: absolute;
+    inset: -7px;
+  }
+  .pin-resolved {
+    @apply bg-ok text-okbg;
+  }
+  .section-title {
+    @apply text-base font-semibold text-ink;
+  }
 }
-.btn-primary {
-  @apply border-ink bg-ink text-white hover:bg-ink/85;
+
+dialog.sheet {
+  margin: auto;
+  max-height: min(90dvh, 900px);
+  width: min(100% - 2rem, 44rem);
+  border-radius: 0.75rem;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  padding: 0;
+  box-shadow: 0 24px 64px rgb(var(--shadow) / 0.28);
 }
-.btn-accent {
-  @apply border-accent bg-accent text-white hover:bg-accent-ink hover:border-accent-ink;
+dialog.sheet::backdrop {
+  background: rgb(17 17 19 / 0.45);
 }
-.btn-ghost {
-  @apply border-transparent bg-transparent hover:bg-ink/5;
-}
-.input {
-  @apply w-full rounded-md border border-line bg-card px-3 py-2 text-sm outline-none focus:border-ink/50 focus:ring-2 focus:ring-ink/10;
-}
-.label {
-  @apply mb-1 block text-xs font-medium uppercase tracking-wide text-muted;
-}
-.card {
-  @apply rounded-xl border border-line bg-card;
-}
-.chip {
-  @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium;
-}
-.pin {
-  @apply absolute flex h-6 w-6 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-2 border-white bg-accent text-[11px] font-bold text-white shadow-md;
-}
-.pin-resolved {
-  @apply bg-ok;
-}
+@media (prefers-reduced-motion: no-preference) {
+  dialog.sheet[open] {
+    animation: sheet-in 180ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  @keyframes sheet-in {
+    from {
+      opacity: 0;
+      transform: translateY(8px) scale(0.985);
+    }
+  }
 }

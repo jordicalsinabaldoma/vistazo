@@ -10,31 +10,38 @@ comentario-resumen y un prompt que **tú** revisas y pegas.
 
 ## Circuito
 
-1. **Publicar** una revisión — desde el agente (`vistazo publish`, CLI o MCP) o desde el formulario. Las dos vías llaman
-   a la misma API (`POST /api/projects/:id/revisions`) y producen exactamente el mismo objeto.
-2. **Compartir** — miembros identificados (propietario, editor, revisor) o enlace de invitado revocable, limitado a un proyecto.
-3. **Revisar** — comentarios anclados a una captura (posición, y segundo en vídeos), a un paso, a la web en vivo
-   (posición o, con `bridge.js`, elemento con selector) o generales. Checklist de flujos críticos por proyecto.
-4. **Responder / resolver** (equipo autor) ≠ **aprobar** (usuario identificado, acto explícito). La aprobación es visual:
-   no hace merge ni deploy.
-5. **Nueva revisión** — historial intacto; los comentarios abiertos se arrastran solos; diff visual con la anterior.
-6. **Feedback para el agente** — resumen + prompt + JSON (web, `vistazo feedback`, herramienta MCP `vistazo_feedback`).
+**App → Revisión → Versión**, como repositorio → pull request → commits. Detalle de producto en `PRODUCT.md`;
+sistema visual en `DESIGN.md`.
+
+1. **Publicar** una versión desde el agente (`vistazo publish`, CLI o MCP) o desde el formulario. Las dos vías llaman a
+   la misma API (`POST /api/projects/:id/revisions`). La versión va a la revisión abierta de la **rama** (o crea una
+   revisión nueva); con `review.id` va a una revisión concreta.
+2. **Compartir**: personas con cuenta (propietario, editor, revisor) o un enlace de invitado que **solo abre esa
+   revisión**, revocable y con caducidad.
+3. **Revisar**: modo revisión con capturas por pasos, web en vivo o cambios desde la versión anterior; al lado, qué
+   probar (flujos críticos de la app + los de la revisión), datos de prueba y comentarios anclados.
+   **Terminar revisión**: Aprobar, Pedir cambios o Solo comentar (los invitados solo envían comentarios; el autor no
+   aprueba lo suyo).
+4. **Llevar el feedback a tu agente**: prompt con los comentarios aislados como datos (web, `vistazo feedback`,
+   herramienta MCP `vistazo_feedback`). Resumen markdown solo para personas.
+5. **Nueva versión**: los comentarios abiertos de esa revisión pasan solos; el diff compara con la anterior de la misma
+   revisión; la aprobación anterior deja de contar.
+
+El estado de la revisión se calcula (`src/lib/flow.ts`) y decide el botón principal de cada persona, sin bloquear
+nada más. El buzón **Te toca** (`/app`) junta lo pendiente de todas tus apps.
 
 ## Modelo
 
 ```
-Proyecto (contexto, checklist, miembros, enlaces de invitado, claves de agente)
- └─ Revisión vN (inmutable salvo aprobaciones/checks: título, contexto, enlace en vivo, vías de prueba, meta)
-     └─ Recorrido (clave estable + descripción en lenguaje natural)
-         └─ Paso (clave estable, notas, URL) → adjuntos (imagen, vídeo, artifact)
-Comentario (cuelga del PROYECTO): ancla + revisionIds[] donde está vigente + historial de eventos
+App (colección projects: contexto, flujos críticos, miembros, claves de agente)
+ └─ Revisión (reviews: título, qué cambia, qué probar, datos de prueba, rama, enlace a PR, estado)
+     ├─ Versión vN (revisions: inmutable salvo veredictos y checks; recorridos → pasos → adjuntos)
+     └─ Comentario (comments: ancla + revisionIds[] donde está vigente + historial de eventos)
+Enlace de invitado (shareLinks: atado a una revisión)
 ```
 
-Cambio respecto a la propuesta inicial: los comentarios no se copian a cada versión. Viven en el proyecto con la lista
-de revisiones donde están vigentes (`revisionIds`). Publicar añade la nueva revisión a todos los abiertos («arrastre»),
-así no hay duplicados, el historial de cada comentario es uno solo y las revisiones viejas siguen mostrando lo que
-tenían. Las **claves estables** de recorrido y paso permiten emparejar capturas entre versiones (diff) y colocar los
-comentarios arrastrados en el paso correcto.
+Los datos anteriores (versiones sueltas por app) se agrupan solos en una revisión #1 la primera vez que se leen
+(`ensureMigrated`, idempotente y en transacción): un despliegue nuevo no necesita script de migración.
 
 ## Arquitectura
 
@@ -43,12 +50,13 @@ comentarios arrastrados en el paso correcto.
 | Front + API | Next.js 16 (App Router, route handlers) en Vercel, región `fra1` | Decisión tomada: todo en Vercel |
 | Base de datos | Firestore (proyecto Firebase dedicado, plan Spark) vía `firebase-admin` | Decisión tomada: Firebase solo como BD |
 | Ficheros | Vercel Blob **privado**; subida directa con token de un solo fichero; lectura siempre por `/api/files/…` con control de acceso | Sin el límite de 4,5 MB del cuerpo de las funciones; revocar un enlace corta también capturas y vídeos |
-| Auth | Cuentas propias (correo + contraseña scrypt), sesión JWT en cookie httpOnly; invitado = cookie firmada atada a un enlace que se comprueba en cada petición; agente = clave `vzk_…` por proyecto (solo se guarda su hash) | Sin dependencias externas; revocable al instante |
+| Auth | Cuentas propias (correo + contraseña scrypt), sesión JWT en cookie httpOnly; invitado = cookie firmada atada a un enlace de revisión que se comprueba en cada petición; agente = clave `vzk_…` por app (solo se guarda su hash) | Sin dependencias externas; revocable al instante |
 | Capturas | Runner Playwright en **la máquina del agente** (`vistazo capture` / `publish --capture`) | Ver «Viabilidad» |
 | Web en vivo | iframe + capa de pines; `bridge.js` opcional en la app para anclar a elementos | Funciona con cualquier web que se deje enmarcar |
 
-Permisos: `src/lib/auth.ts` (`access()` decide por proyecto). Invitado: ver, probar, comentar, marcar checklist; no
-aprueba, no resuelve. Agente: publicar y leer feedback; no comenta, no resuelve, no aprueba.
+Permisos: `src/lib/auth.ts` (`access()` decide por app; `needScope()` limita al invitado a su revisión). Invitado: ver,
+probar, comentar, marcar lo probado, enviar comentarios; no aprueba, no resuelve, no lee el prompt. Agente: publicar y
+leer feedback; no comenta, no resuelve, no aprueba. Autor de una revisión: no la aprueba ni pide cambios en ella.
 
 ## Viabilidad comprobada (y lo que no)
 
@@ -72,11 +80,16 @@ aprueba, no resuelve. Agente: publicar y leer feedback; no comenta, no resuelve,
 ```bash
 export VISTAZO_URL=https://vistazo-pi.vercel.app VISTAZO_PROJECT=<id> VISTAZO_API_KEY=vzk_…   # nunca en el repo
 cd cli && npm i && npx playwright install chromium
-node cli/bin/vistazo.mjs publish --config vistazo.config.json --capture --title "…" --summary "…" --meta rama=…
+node cli/bin/vistazo.mjs publish --config vistazo.config.json --capture --title "…" --summary "…"   # rama actual
 node cli/bin/vistazo.mjs publish --assets ./capturas --qr "exp+app://…" --title "…"   # app nativa / runner externo
-node cli/bin/vistazo.mjs feedback latest            # prompt recomendado (o --summary / --json)
+node cli/bin/vistazo.mjs publish … --branch feature/x --pr https://github.com/o/r/pull/7 --test-data "usuario / clave de test"
+node cli/bin/vistazo.mjs feedback                   # prompt de la revisión de tu rama (o --json)
+node cli/bin/vistazo.mjs reviews                    # revisiones de la app con su estado
 node cli/bin/vistazo.mjs mcp                        # servidor MCP por stdio
 ```
+
+Sin `--pr`, si `gh` está instalado y autenticado, la CLI lee la PR de la rama (`gh pr view`, solo lectura) y guarda
+**solo el enlace**: no se sincroniza estado ni se escribe nada en GitHub.
 
 `vistazo.config.json` (ejemplo real en `demo/vistazo.config.json`): `baseUrl`, `allowHosts` (la CLI se niega a capturar
 otros hosts), `viewport`, `mask`, `video` y `flows[]` con `description` en lenguaje natural + `actions` que traduce el
@@ -88,8 +101,18 @@ Plantillas e instrucciones para agentes y otros runners en `integrations/`.
 - Secretos solo en variables de entorno (`SESSION_SECRET`, `FIREBASE_SERVICE_ACCOUNT_B64`, `BLOB_READ_WRITE_TOKEN`).
   La service account `vistazo-backend` solo tiene `roles/datastore.user`.
 - Enlaces de invitado y claves: se guarda el hash; el secreto se muestra una vez. Revocación inmediata.
-- Comentarios → prompt: van como JSON dentro de `<reviewer_comments>`, con `<` y `>` escapados para que nadie cierre el
-  bloque, y el prompt dice explícitamente que son datos de terceros. Nada se ejecuta solo.
+- **Feedback para el agente** (`src/lib/feedback.ts`, `src/lib/untrusted.ts`). Todo lo que escriben revisores e
+  invitados (y lo que llega del navegador: URL, selector, texto del elemento) es dato de terceros. Capas:
+  1. Un solo canal: los datos de terceros solo van dentro de un bloque JSON; fuera solo hay texto del equipo y números.
+  2. Delimitador con código aleatorio por generación (`<reviewer_comments_…>`), y `<`, `>`, `&` escapados dentro.
+  3. Sin caracteres invisibles (tags Unicode, bidi, anchura cero…), al guardar y al generar.
+  4. Lo que parece una orden para un agente se aparta por defecto; solo una persona, desde la web, puede incluirlo.
+  5. Persona en el medio: el prompt pide un plan antes de tocar nada; el agente no recibe el resumen markdown; la CLI y
+     el MCP no tienen herramientas para borrar, desplegar ni hacer push.
+
+  Pruebas: `npm test` (propiedades con marcas en cada campo de terceros + fuzz), `scripts/e2e.mjs` (contra la API) y
+  `scripts/redteam-feedback.ts` (comportamiento con un modelo real y herramientas falsas; cuesta dinero). Ningún
+  formato garantiza que un modelo no obedezca un texto: por eso la capa 5 es la que contiene el daño.
 - Los artifacts HTML/SVG se sirven como descarga, nunca se renderizan en el origen de Vistazo.
 - `bridge.js` solo habla con la ventana del origen del que se cargó; no envía nada a ningún servidor ni lee formularios.
 
@@ -97,9 +120,15 @@ Plantillas e instrucciones para agentes y otros runners en `integrations/`.
 
 ```bash
 npm i && vercel env pull .env.local
-npm run dev
-VISTAZO_URL=… DEMO_PASSWORD=… node scripts/acceptance.mjs   # prueba de punta a punta → evidence/
+npm test                                             # aislamiento del prompt (sin red)
+# Local sin tocar la base de datos real: emulador de Firestore + copia de la demo (solo lee de producción)
+java -jar ~/.cache/firebase/emulators/cloud-firestore-emulator-*.jar --host=127.0.0.1 --port=8085 &
+FIRESTORE_EMULATOR_HOST=127.0.0.1:8085 SOURCE=https://vistazo-pi.vercel.app DEMO_PASSWORD=… node scripts/seed-local.mjs
+FIRESTORE_EMULATOR_HOST=127.0.0.1:8085 npx next dev -p 3100
+VISTAZO_URL=http://localhost:3100 PROJECT=<id> DEMO_PASSWORD=… node scripts/e2e.mjs   # circuito completo (crea datos)
 ```
+
+`scripts/walkthrough*.mjs` grabaron el vídeo de la interfaz anterior; no están adaptados a la nueva.
 
 Límites del POC y pendientes: `docs/PENDIENTE.md`. Compatibilidad futura con apps nativas con OTA por PR:
 `docs/COMPATIBILIDAD-NATIVA.md` e `integrations/`.

@@ -32,25 +32,21 @@ export default function Home() {
     <main className="mx-auto grid w-full max-w-6xl flex-1 gap-12 px-4 py-10 md:grid-cols-[1.3fr_1fr] md:py-20">
       <section>
         <Logo />
-        <h1 className="mt-10 text-4xl font-semibold leading-[1.05] tracking-tight md:text-6xl">
-          La pull request
-          <br />
-          <span className="text-accent">visual</span> de tu app.
+        <h1 className="mt-10 text-4xl font-semibold leading-[1.05] tracking-tight text-balance md:text-6xl">
+          La pull request visual de tu app.
         </h1>
         <p className="mt-6 max-w-xl text-lg text-muted">
-          Publica una versión con su contexto y sus recorridos de prueba, comparte un enlace, deja que la prueben y
-          comenten sobre lo que ven, y recoge una aprobación explícita. El feedback vuelve a tu agente de código como un
-          resumen y un prompt que tú revisas.
+          Enseña cada cambio, deja que lo prueben y comenten sobre lo que ven, y llévate el feedback a tu agente.
         </p>
         <ol className="mt-10 grid max-w-xl gap-3 text-sm">
           {[
-            ["Publica", "desde tu agente (CLI/MCP) o con un formulario: enlace, capturas, vídeos, recorridos."],
-            ["Comparte", "con miembros identificados o con un enlace de invitado revocable, por proyecto."],
-            ["Revisa", "comentarios anclados a capturas, pasos o la web en vivo. Checklist de flujos críticos."],
-            ["Cierra el círculo", "resumen + prompt para tu agente; la siguiente versión arrastra lo pendiente."],
+            ["Publica", "desde tu agente o con un formulario: enlace en vivo, capturas y qué hay que probar."],
+            ["Comparte", "con tu equipo o con un enlace de invitado que solo abre esa revisión."],
+            ["Revisa", "comentarios sobre capturas o la web en vivo. Aprobar o pedir cambios es explícito."],
+            ["Corrige", "llévate el feedback a tu agente como un prompt que revisas tú, y publica otra versión."],
           ].map(([t, d], i) => (
             <li key={t} className="flex gap-3">
-              <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-ink text-xs font-bold text-white">
+              <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-ink text-xs font-bold text-paper">
                 {i + 1}
               </span>
               <span>
@@ -67,18 +63,20 @@ export default function Home() {
             <p className="text-sm text-muted">Sesión iniciada como</p>
             <p className="mt-1 text-lg font-semibold">{logged}</p>
             <a href="/app" className="btn btn-primary mt-6 w-full">
-              Ir a mis proyectos
+              Ir a mis apps
             </a>
           </div>
         ) : (
           <form onSubmit={submit} className="card p-6">
-            <div className="mb-6 flex gap-1 rounded-lg bg-paper p-1 text-sm">
+            <div className="segmented mb-6 flex w-full" role="tablist">
               {(["login", "signup"] as const).map((m) => (
                 <button
                   type="button"
                   key={m}
                   onClick={() => setMode(m)}
-                  className={`flex-1 rounded-md py-1.5 font-medium ${mode === m ? "bg-card shadow-sm" : "text-muted"}`}
+                  role="tab"
+                  aria-selected={mode === m}
+                  className="flex-1 justify-center"
                 >
                   {m === "login" ? "Entrar" : "Crear cuenta"}
                 </button>
@@ -112,12 +110,16 @@ export default function Home() {
                 autoComplete={mode === "login" ? "current-password" : "new-password"}
               />
             </div>
-            {err && <p className="mb-4 rounded-md bg-badbg px-3 py-2 text-sm text-bad">{err}</p>}
+            {err && (
+              <p role="alert" className="mb-4 rounded-lg bg-badbg px-3 py-2 text-sm text-bad">
+                {err}
+              </p>
+            )}
             <button className="btn btn-primary w-full" disabled={busy}>
               {mode === "login" ? "Entrar" : "Crear cuenta"}
             </button>
             <p className="mt-4 text-xs text-muted">
-              ¿Te han pasado un enlace de revisión? Ábrelo directamente: no necesitas cuenta para ver, probar y comentar.
+              ¿Te han pasado un enlace para revisar? Ábrelo directamente: no necesitas cuenta para probar y comentar.
             </p>
           </form>
         )}

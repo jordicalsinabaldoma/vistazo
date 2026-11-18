@@ -5,6 +5,7 @@ import { col } from "@/lib/db";
 import { bad, handle, ok } from "@/lib/http";
 import type { Anchor, Comment } from "@/lib/model";
 import { revAccess } from "@/lib/revaccess";
+import { clean } from "@/lib/untrusted";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -40,6 +41,12 @@ export const POST = handle(async (req: Request, { params }: Ctx) => {
   need(a, "comment");
   const b = schema.parse(await req.json());
   const an = b.anchor as Anchor;
+  // Lo que llega del navegador también es de terceros: sin caracteres invisibles.
+  if (an.type === "live") {
+    an.url = clean(an.url, 2000);
+    if (an.selector) an.selector = clean(an.selector, 500);
+    if (an.text) an.text = clean(an.text, 300);
+  }
   if (an.type === "asset") {
     const asset = rev.flows
       .find((f) => f.key === an.flowKey)
@@ -52,11 +59,12 @@ export const POST = handle(async (req: Request, { params }: Ctx) => {
   const c: Comment = {
     id: nanoid(10),
     projectId: rev.projectId,
+    reviewId: rev.reviewId,
     originRevisionId: rev.id,
     originRevisionNumber: rev.number,
     revisionIds: [rev.id],
     anchor: an,
-    body: b.body,
+    body: clean(b.body),
     author: a.author,
     status: "open",
     replies: [],

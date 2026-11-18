@@ -6,7 +6,7 @@ import { api } from "@/lib/client";
 
 export default function GuestEntry() {
   const { token } = useParams<{ token: string }>();
-  const [info, setInfo] = useState<{ projectName: string; label: string } | null>(null);
+  const [info, setInfo] = useState<{ projectName: string; label: string; review: { number: number; title: string } | null } | null>(null);
   const [err, setErr] = useState("");
   const [name, setName] = useState("");
 
@@ -28,21 +28,24 @@ export default function GuestEntry() {
     <main className="mx-auto w-full max-w-md flex-1 px-4 py-16">
       <Logo />
       {err ? (
-        <p className="card mt-10 p-6 text-bad">{err}</p>
+        <p role="alert" className="mt-10 rounded-xl bg-badbg p-6 text-bad">
+          {err}
+        </p>
       ) : !info ? (
         <p className="mt-10 text-muted">Comprobando enlace…</p>
       ) : (
         <form onSubmit={enter} className="card mt-10 p-6">
-          <p className="text-sm text-muted">Te han invitado a revisar</p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight">{info.projectName}</h1>
-          <p className="mt-4 text-sm text-muted">
-            Como invitado puedes ver, probar la app y comentar. La aprobación formal la hace un usuario identificado.
-          </p>
+          <h1 className="text-2xl font-semibold tracking-tight text-balance">
+            {info.review ? info.review.title : info.projectName}
+          </h1>
+          <p className="mt-1 text-sm text-muted">Te han invitado a revisar {info.review ? `un cambio de ${info.projectName}` : info.projectName}.</p>
+          <p className="mt-4 text-sm">Puedes probarla, comentar sobre lo que veas y enviar tus comentarios. No necesitas cuenta.</p>
           <label className="label mt-6" htmlFor="gn">
-            ¿Cómo te llamas? (se verá en tus comentarios)
+            Tu nombre
           </label>
+          <p className="hint -mt-1 mb-2">Se verá junto a tus comentarios.</p>
           <input id="gn" className="input" required value={name} onChange={(e) => setName(e.target.value)} maxLength={60} />
-          <button className="btn btn-primary mt-4 w-full">Entrar a la revisión</button>
+          <button className="btn btn-primary mt-4 w-full">Empezar</button>
         </form>
       )}
     </main>

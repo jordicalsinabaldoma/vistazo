@@ -1,66 +1,127 @@
 "use client";
+import { ArrowRight, Plus } from "@phosphor-icons/react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import TopBar from "@/components/TopBar";
+import { ErrorNote, StateLabel, plural } from "@/components/ui";
 import { api } from "@/lib/client";
+import type { NextStep } from "@/lib/flow";
+import type { ReviewSummary } from "@/lib/revisions";
 
-type P = { id: string; name: string; role: string; revisionCount: number };
+type P = { id: string; name: string; role: string; reviewCount: number | null };
+type Item = { project: { id: string; name: string }; review: ReviewSummary; step: NextStep };
 
-export default function Projects() {
+const ROLE: Record<string, string> = { owner: "Propietario", editor: "Editor", reviewer: "Revisor" };
+
+export default function Home() {
   const [projects, setProjects] = useState<P[] | null>(null);
+  const [items, setItems] = useState<Item[] | null>(null);
   const [err, setErr] = useState("");
+  const [creating, setCreating] = useState(false);
 
-  const load = () =>
-    api<{ projects: P[] }>("/api/projects")
-      .then((r) => setProjects(r.projects))
-      .catch((e) => (e.status === 401 ? (location.href = "/") : setErr(e.message)));
   useEffect(() => {
-    load();
+    const fail = (e: Error & { status?: number }) => (e.status === 401 ? (location.href = "/") : setErr(e.message));
+    api<{ projects: P[] }>("/api/projects").then((r) => setProjects(r.projects)).catch(fail);
+    api<{ items: Item[] }>("/api/inbox").then((r) => setItems(r.items)).catch(fail);
   }, []);
 
   async function create(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const f = Object.fromEntries(new FormData(e.currentTarget));
-    const r = await api<{ id: string }>("/api/projects", { method: "POST", json: f });
-    location.href = `/p/${r.id}`;
+    try {
+      const r = await api<{ id: string }>("/api/projects", { method: "POST", json: f });
+      location.href = `/p/${r.id}`;
+    } catch (e) {
+      setErr((e as Error).message);
+    }
   }
 
   return (
     <>
-      <TopBar>Proyectos</TopBar>
-      <main className="mx-auto w-full max-w-5xl px-4 py-10">
-        <h1 className="text-2xl font-semibold tracking-tight">Tus proyectos</h1>
-        {err && <p className="mt-4 text-bad">{err}</p>}
-        <div className="mt-6 grid gap-3 sm:grid-cols-2">
-          {projects?.map((p) => (
-            <Link key={p.id} href={`/p/${p.id}`} className="card block p-5 transition hover:border-ink/40">
-              <div className="flex items-center justify-between">
-                <span className="font-semibold">{p.name}</span>
-                <span className="chip bg-paper text-muted">{p.role}</span>
+      <TopBar />
+      <main className="mx-auto grid w-full max-w-5xl gap-12 px-4 py-10">
+        <ErrorNote>{err}</ErrorNote>
+        <section aria-labelledby="toca">
+          <h1 id="toca" className="text-2xl font-semibold tracking-tight">
+            Te toca
+          </h1>
+          <p className="mt-1 text-sm text-muted">Revisiones de todas tus apps en las que el siguiente paso es tuyo.</p>
+          <ul className="mt-5 grid gap-2">
+            {items === null && <li className="h-20 animate-pulse rounded-xl bg-sunken" />}
+            {items?.length === 0 && (
+              <li className="card px-5 py-8 text-center text-sm text-muted">Nada pendiente. Cuando alguien te pida revisar o te devuelvan feedback, aparecerá aquí.</li>
+            )}
+            {items?.map(({ project, review: r, step }) => (
+              <li key={r.id}>
+                <Link
+                  href={`/r/${r.latestRevisionId}`}
+                  className="card group flex flex-col gap-3 p-4 transition-colors hover:border-field sm:flex-row sm:items-center"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <StateLabel stage={r.stage} label={r.stageLabel} />
+                      <span className="text-sm text-muted">{project.name}</span>
+                    </div>
+                    <p className="mt-1.5 font-medium">
+                      <span className="text-muted tabular">#{r.number}</span> {r.title}
+                    </p>
+                    <p className="mt-0.5 text-sm text-muted">{step.text}</p>
+                  </div>
+                  {step.primary && (
+                    <span className="inline-flex items-center gap-1 text-sm font-medium text-accent-ink group-hover:underline">
+                      {step.primary.label}
+                      <ArrowRight size={15} aria-hidden />
+                    </span>
+                  )}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <section aria-labelledby="apps">
+          <div className="flex items-end justify-between gap-4">
+            <h2 id="apps" className="text-lg font-semibold">
+              Tus apps
+            </h2>
+            <button className="btn btn-sm" onClick={() => setCreating((v) => !v)} aria-expanded={creating}>
+              <Plus size={15} aria-hidden /> Nueva app
+            </button>
+          </div>
+          {creating && (
+            <form onSubmit={create} className="card mt-4 grid max-w-xl gap-4 p-5">
+              <div>
+                <label className="label" htmlFor="pn">
+                  Nombre
+                </label>
+                <input id="pn" name="name" required className="input" placeholder="App de pedidos" autoFocus />
               </div>
-              <p className="mt-2 text-sm text-muted">{p.revisionCount} revisiones</p>
-            </Link>
-          ))}
-          {projects?.length === 0 && <p className="text-muted">Aún no tienes proyectos.</p>}
-        </div>
-        <form onSubmit={create} className="card mt-10 max-w-xl p-5">
-          <h2 className="font-semibold">Nuevo proyecto</h2>
-          <label className="label mt-4" htmlFor="pn">
-            Nombre
-          </label>
-          <input id="pn" name="name" required className="input" placeholder="App de pedidos" />
-          <label className="label mt-4" htmlFor="pc">
-            Contexto (opcional)
-          </label>
-          <textarea
-            id="pc"
-            name="context"
-            rows={3}
-            className="input"
-            placeholder="Qué es la app, para quién, qué no hay que tocar…"
-          />
-          <button className="btn btn-primary mt-4">Crear</button>
-        </form>
+              <div>
+                <label className="label" htmlFor="pc">
+                  Sobre la app <span className="font-normal text-muted">(opcional)</span>
+                </label>
+                <textarea id="pc" name="context" rows={3} className="input" placeholder="Qué es, para quién, qué no hay que tocar." />
+                <p className="hint">Lo verá cada revisor y entra en el prompt para tu agente.</p>
+              </div>
+              <div>
+                <button className="btn btn-strong">Crear app</button>
+              </div>
+            </form>
+          )}
+          <ul className="mt-4 divide-y divide-line overflow-hidden rounded-xl border border-line bg-card">
+            {projects === null && <li className="h-16 animate-pulse bg-sunken" />}
+            {projects?.length === 0 && <li className="px-5 py-8 text-center text-sm text-muted">Aún no tienes apps. Crea una para publicar tu primera revisión.</li>}
+            {projects?.map((p) => (
+              <li key={p.id}>
+                <Link href={`/p/${p.id}`} className="flex items-center gap-3 px-5 py-4 transition-colors hover:bg-sunken/60">
+                  <span className="min-w-0 flex-1 truncate font-medium">{p.name}</span>
+                  <span className="text-sm text-muted">{p.reviewCount != null ? plural(p.reviewCount, "revisión", "revisiones") : ""}</span>
+                  <span className="chip bg-neutral text-muted">{ROLE[p.role] ?? p.role}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
       </main>
     </>
   );

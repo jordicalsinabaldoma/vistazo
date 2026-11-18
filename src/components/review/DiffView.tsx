@@ -1,19 +1,20 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { fileUrl } from "@/lib/client";
 import type { Asset, Revision } from "@/lib/model";
 
 type Pair = { flow: string; step: string; key: string; before?: Asset; after?: Asset };
+type Box = { x: number; y: number; w: number; h: number }; // fracciones 0..1 de la imagen «ahora»
+type Result = { pct: number; boxes: Box[]; note?: string } | { error: string };
 
-/** Empareja capturas por recorrido/paso (claves estables) entre dos revisiones. */
+/** Empareja capturas por recorrido/paso (claves estables) entre dos versiones. */
 function pairs(prev: Revision, cur: Revision): Pair[] {
   const img = (s?: { assets: Asset[] }) => s?.assets.find((a) => a.kind === "image");
   const out: Pair[] = [];
   const seen = new Set<string>();
   for (const f of cur.flows)
     for (const s of f.steps) {
-      const pf = prev.flows.find((x) => x.key === f.key);
-      const ps = pf?.steps.find((x) => x.key === s.key);
+      const ps = prev.flows.find((x) => x.key === f.key)?.steps.find((x) => x.key === s.key);
       const k = `${f.key}/${s.key}`;
       seen.add(k);
       if (img(s) || img(ps)) out.push({ flow: f.title, step: s.title, key: k, before: img(ps), after: img(s) });
@@ -26,26 +27,155 @@ function pairs(prev: Revision, cur: Revision): Pair[] {
   return out;
 }
 
+function load(src: string) {
+  return new Promise<HTMLImageElement>((ok, ko) => {
+    const i = new Image();
+    i.onload = () => ok(i);
+    i.onerror = ko;
+    i.src = src;
+  });
+}
+
+const W = 320; // ancho de cálculo: rápido y suficiente para encontrar zonas
+const CELL = 8;
+
+/**
+ * Compara dos capturas a baja resolución y devuelve ZONAS que cambian (rectángulos),
+ * no un mar de píxeles rojos. Las celdas cercanas se agrupan en una sola zona.
+ */
+async function compare(before: Asset, after: Asset): Promise<Result> {
+  const [a, b] = await Promise.all([load(fileUrl(before.pathname)), load(fileUrl(after.pathname))]);
+  const s = W / b.naturalWidth;
+  const Hb = Math.max(1, Math.round(b.naturalHeight * s));
+  const H = Math.max(Hb, Math.round(a.naturalHeight * (W / a.naturalWidth)));
+  const draw = (img: HTMLImageElement) => {
+    const c = document.createElement("canvas");
+    c.width = W;
+    c.height = H;
+    const x = c.getContext("2d", { willReadFrequently: true })!;
+    x.fillStyle = "#fff";
+    x.fillRect(0, 0, W, H);
+    x.drawImage(img, 0, 0, W, Math.round(img.naturalHeight * (W / img.naturalWidth)));
+    return x.getImageData(0, 0, W, H).data;
+  };
+  const A = draw(a), B = draw(b);
+  const cols = Math.ceil(W / CELL), rows = Math.ceil(H / CELL);
+  const hits = new Uint16Array(cols * rows);
+  let changed = 0;
+  for (let y = 0; y < H; y++)
+    for (let x = 0; x < W; x++) {
+      const i = (y * W + x) * 4;
+      if (Math.abs(A[i] - B[i]) + Math.abs(A[i + 1] - B[i + 1]) + Math.abs(A[i + 2] - B[i + 2]) > 60) {
+        changed++;
+        hits[Math.floor(y / CELL) * cols + Math.floor(x / CELL)]++;
+      }
+    }
+  const on = new Uint8Array(cols * rows);
+  for (let i = 0; i < on.length; i++) on[i] = hits[i] > CELL * CELL * 0.04 ? 1 : 0;
+  // Agrupa celdas activas (vecinas a 2 celdas o menos) en zonas.
+  const seen = new Uint8Array(cols * rows);
+  const boxes: Box[] = [];
+  for (let i = 0; i < on.length; i++) {
+    if (!on[i] || seen[i]) continue;
+    let x0 = cols, y0 = rows, x1 = 0, y1 = 0, n = 0;
+    const stack = [i];
+    seen[i] = 1;
+    while (stack.length) {
+      const j = stack.pop()!;
+      const cx = j % cols, cy = Math.floor(j / cols);
+      x0 = Math.min(x0, cx); y0 = Math.min(y0, cy); x1 = Math.max(x1, cx); y1 = Math.max(y1, cy); n++;
+      for (let dy = -2; dy <= 2; dy++)
+        for (let dx = -2; dx <= 2; dx++) {
+          const nx = cx + dx, ny = cy + dy;
+          if (nx < 0 || ny < 0 || nx >= cols || ny >= rows) continue;
+          const k = ny * cols + nx;
+          if (on[k] && !seen[k]) {
+            seen[k] = 1;
+            stack.push(k);
+          }
+        }
+    }
+    if (n < 2) continue;
+    // Coordenadas relativas a la captura «ahora» (sobre la que se dibujan las zonas).
+    const top = Math.min(1, (y0 * CELL) / Hb), bottom = Math.min(1, ((y1 + 1) * CELL) / Hb);
+    if (bottom > top) boxes.push({ x: (x0 * CELL) / W, y: top, w: Math.min(1, ((x1 + 1) * CELL) / W) - (x0 * CELL) / W, h: bottom - top });
+  }
+  boxes.sort((p, q) => p.y - q.y || p.x - q.x);
+  const note =
+    Math.abs(a.naturalWidth / a.naturalHeight - b.naturalWidth / b.naturalHeight) > 0.02 ? `La pantalla cambió de tamaño (${a.naturalWidth}×${a.naturalHeight} a ${b.naturalWidth}×${b.naturalHeight}).` : undefined;
+  return { pct: (changed / (W * H)) * 100, boxes, note };
+}
+
 export default function DiffView({ prev, cur }: { prev: Revision | null; cur: Revision }) {
-  if (!prev) return <p className="p-6 text-muted">Es la primera revisión: no hay versión anterior con la que comparar.</p>;
-  const ps = pairs(prev, cur);
-  if (!ps.length) return <p className="p-6 text-muted">No hay capturas que comparar.</p>;
+  const ps = useMemo(() => (prev ? pairs(prev, cur) : []), [prev, cur]);
+  const [results, setResults] = useState<Record<string, Result>>({});
+  const [all, setAll] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      // De dos en dos, para no bloquear la página.
+      const queue = ps.filter((p) => p.before && p.after);
+      const work = async () => {
+        while (alive && queue.length) {
+          const p = queue.shift()!;
+          const r = await compare(p.before!, p.after!).catch(() => ({ error: "No se pudieron cargar las capturas." }));
+          if (alive) setResults((x) => ({ ...x, [p.key]: r }));
+          await new Promise((ok) => setTimeout(ok, 0));
+        }
+      };
+      await Promise.all([work(), work()]);
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [ps]);
+
+  if (!prev) return <p className="card p-6 text-muted">Es la primera versión: no hay otra con la que comparar.</p>;
+  if (!ps.length) return <p className="card p-6 text-muted">No hay capturas que comparar entre la v{prev.number} y la v{cur.number}.</p>;
+
+  const same = (p: Pair) => {
+    const r = results[p.key];
+    return !!r && !("error" in r) && r.boxes.length === 0;
+  };
+  const pending = ps.filter((p) => p.before && p.after && !results[p.key]).length;
+  const nSame = ps.filter(same).length;
+  const nNew = ps.filter((p) => !p.before).length;
+  const nGone = ps.filter((p) => !p.after).length;
+  const nChanged = ps.length - nSame - nNew - nGone - pending;
+  const shown = ps.filter((p) => all || !same(p));
+
   return (
-    <div className="grid gap-8">
-      <p className="text-sm text-muted">
-        v{prev.number} → v{cur.number}. Se emparejan por clave de recorrido y paso. En rojo, los píxeles que cambian.
-      </p>
-      {ps.map((p) => (
-        <section key={p.key}>
+    <div className="grid gap-10">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <p className="text-[15px]" aria-live="polite">
+          De la v{prev.number} a la v{cur.number}:{" "}
+          <b>
+            {nChanged} {nChanged === 1 ? "pantalla cambia" : "pantallas cambian"}
+          </b>
+          {nSame > 0 && `, ${nSame} ${nSame === 1 ? "igual" : "iguales"}`}
+          {nNew > 0 && `, ${nNew} ${nNew === 1 ? "nueva" : "nuevas"}`}
+          {nGone > 0 && `, ${nGone} ${nGone === 1 ? "quitada" : "quitadas"}`}
+          {pending > 0 && <span className="text-muted"> (comparando {pending}…)</span>}
+        </p>
+        {nSame > 0 && (
+          <label className="ml-auto inline-flex cursor-pointer items-center gap-2 text-sm text-muted">
+            <input type="checkbox" className="h-4 w-4 accent-[var(--accent)]" checked={all} onChange={(e) => setAll(e.target.checked)} />
+            Mostrar también las iguales
+          </label>
+        )}
+      </div>
+      {shown.map((p) => (
+        <section key={p.key} aria-label={`${p.flow}, ${p.step}`}>
           <h3 className="mb-2 font-medium">
-            {p.flow} › {p.step}
+            {p.flow} <span className="text-muted">&gt;</span> {p.step}
           </h3>
           {p.before && p.after ? (
-            <ImageDiff before={p.before} after={p.after} />
+            <ImageDiff before={p.before} after={p.after} result={results[p.key]} from={prev.number} to={cur.number} />
           ) : p.after ? (
-            <Single asset={p.after} label={`Nuevo en v${cur.number}`} cls="bg-okbg text-ok" />
+            <Single asset={p.after} label={`Nueva en la v${cur.number}`} cls="bg-okbg text-ok" />
           ) : (
-            <Single asset={p.before!} label={`Ya no está en v${cur.number}`} cls="bg-badbg text-bad" />
+            <Single asset={p.before!} label={`Ya no está en la v${cur.number}`} cls="bg-badbg text-bad" />
           )}
         </section>
       ))}
@@ -58,115 +188,93 @@ function Single({ asset, label, cls }: { asset: Asset; label: string; cls: strin
     <div className="max-w-md">
       <span className={`chip ${cls}`}>{label}</span>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={fileUrl(asset.pathname)} alt="" className="mt-2 w-full rounded-lg border border-line" />
+      <img src={fileUrl(asset.pathname)} alt={label} loading="lazy" className="mt-2 w-full rounded-xl border border-line bg-white" />
     </div>
   );
 }
 
-function load(src: string) {
-  return new Promise<HTMLImageElement>((ok, ko) => {
-    const i = new Image();
-    i.onload = () => ok(i);
-    i.onerror = ko;
-    i.src = src;
-  });
-}
-
-function ImageDiff({ before, after }: { before: Asset; after: Asset }) {
-  const canvas = useRef<HTMLCanvasElement>(null);
-  const [pct, setPct] = useState<number | null>(null);
-  const [sizeNote, setSizeNote] = useState("");
-  const [mode, setMode] = useState<"diff" | "side" | "slider">("diff");
+function ImageDiff({ before, after, result, from, to }: { before: Asset; after: Asset; result?: Result; from: number; to: number }) {
+  const [mode, setMode] = useState<"zones" | "slider" | "side">("zones");
   const [cut, setCut] = useState(50);
-
-  useEffect(() => {
-    let alive = true;
-    (async () => {
-      const [a, b] = await Promise.all([load(fileUrl(before.pathname)), load(fileUrl(after.pathname))]);
-      if (!alive || !canvas.current) return;
-      const w = Math.max(a.width, b.width), h = Math.max(a.height, b.height);
-      if (a.width !== b.width || a.height !== b.height) setSizeNote(`Tamaño: ${a.width}×${a.height} → ${b.width}×${b.height}`);
-      const mk = (img: HTMLImageElement) => {
-        const c = document.createElement("canvas");
-        c.width = w;
-        c.height = h;
-        const x = c.getContext("2d")!;
-        x.fillStyle = "#fff";
-        x.fillRect(0, 0, w, h);
-        x.drawImage(img, 0, 0);
-        return x.getImageData(0, 0, w, h);
-      };
-      const A = mk(a), B = mk(b);
-      const out = canvas.current.getContext("2d")!;
-      canvas.current.width = w;
-      canvas.current.height = h;
-      const D = out.createImageData(w, h);
-      let changed = 0;
-      for (let i = 0; i < A.data.length; i += 4) {
-        const d = Math.abs(A.data[i] - B.data[i]) + Math.abs(A.data[i + 1] - B.data[i + 1]) + Math.abs(A.data[i + 2] - B.data[i + 2]);
-        const g = 0.299 * B.data[i] + 0.587 * B.data[i + 1] + 0.114 * B.data[i + 2];
-        if (d > 48) {
-          changed++;
-          D.data[i] = 255; D.data[i + 1] = 40; D.data[i + 2] = 20; D.data[i + 3] = 255;
-        } else {
-          const v = 200 + g * 0.2;
-          D.data[i] = v; D.data[i + 1] = v; D.data[i + 2] = v; D.data[i + 3] = 255;
-        }
-      }
-      out.putImageData(D, 0, 0);
-      setPct((changed / (w * h)) * 100);
-    })().catch(() => setSizeNote("No se pudieron cargar las imágenes"));
-    return () => {
-      alive = false;
-    };
-  }, [before.pathname, after.pathname]);
+  const boxes = result && !("error" in result) ? result.boxes : [];
+  const status = !result
+    ? { t: "Comparando…", c: "bg-neutral text-muted" }
+    : "error" in result
+      ? { t: result.error, c: "bg-badbg text-bad" }
+      : boxes.length === 0
+        ? { t: "Sin cambios visibles", c: "bg-okbg text-ok" }
+        : { t: `${boxes.length} ${boxes.length === 1 ? "zona cambia" : "zonas cambian"}`, c: "bg-warnbg text-warn" };
 
   return (
-    <div>
-      <div className="mb-2 flex flex-wrap items-center gap-2 text-xs">
-        <span className={`chip ${pct === null ? "bg-paper" : pct < 0.05 ? "bg-okbg text-ok" : "bg-warnbg text-warn"}`}>
-          {pct === null ? "Calculando…" : pct < 0.05 ? "Sin cambios visibles" : `${pct.toFixed(1)} % de píxeles cambian`}
-        </span>
-        {sizeNote && <span className="chip bg-paper">{sizeNote}</span>}
-        <div className="ml-auto flex rounded-md border border-line bg-card p-0.5">
+    <div className="max-w-4xl">
+      <div className="mb-2 flex flex-wrap items-center gap-2">
+        <span className={`chip ${status.c}`}>{status.t}</span>
+        {result && !("error" in result) && result.note && <span className="text-xs text-muted">{result.note}</span>}
+        <div className="segmented ml-auto" role="tablist" aria-label="Forma de comparar">
           {(
             [
-              ["diff", "Diferencias"],
+              ["zones", "Zonas"],
+              ["slider", "Antes y ahora"],
               ["side", "Lado a lado"],
-              ["slider", "Deslizador"],
             ] as const
           ).map(([k, l]) => (
-            <button key={k} onClick={() => setMode(k)} className={`rounded px-2 py-1 ${mode === k ? "bg-ink text-white" : ""}`}>
+            <button key={k} role="tab" aria-selected={mode === k} onClick={() => setMode(k)}>
               {l}
             </button>
           ))}
         </div>
       </div>
-      <canvas ref={canvas} className={`w-full max-w-3xl rounded-lg border border-line ${mode === "diff" ? "" : "hidden"}`} />
+      {mode === "zones" && (
+        <div className="relative overflow-hidden rounded-xl border border-line bg-white">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={fileUrl(after.pathname)} alt={`Captura de la v${to} con las zonas que cambian marcadas`} loading="lazy" className="block w-full" />
+          {boxes.map((b, i) => (
+            <span
+              key={i}
+              aria-hidden
+              className="absolute rounded-md border-2 border-accent bg-accent/10"
+              style={{ left: `${b.x * 100}%`, top: `${b.y * 100}%`, width: `${b.w * 100}%`, height: `${b.h * 100}%` }}
+            >
+              <span className="absolute -left-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1 text-[11px] font-bold text-on-accent">{i + 1}</span>
+            </span>
+          ))}
+        </div>
+      )}
       {mode === "side" && (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid gap-3 sm:grid-cols-2">
           {[before, after].map((x, i) => (
-            <div key={x.id}>
-              <p className="mb-1 text-xs text-muted">{i ? "Ahora" : "Antes"}</p>
+            <figure key={x.id}>
+              <figcaption className="mb-1 text-sm text-muted">{i ? `Ahora (v${to})` : `Antes (v${from})`}</figcaption>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={fileUrl(x.pathname)} alt="" className="w-full rounded-lg border border-line" />
-            </div>
+              <img src={fileUrl(x.pathname)} alt={i ? `Captura de la v${to}` : `Captura de la v${from}`} loading="lazy" className="w-full rounded-xl border border-line bg-white" />
+            </figure>
           ))}
         </div>
       )}
       {mode === "slider" && (
-        <div className="max-w-3xl">
-          <div className="relative overflow-hidden rounded-lg border border-line">
+        <div>
+          <div className="relative overflow-hidden rounded-xl border border-line bg-white">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={fileUrl(after.pathname)} alt="" className="block w-full" />
+            <img src={fileUrl(after.pathname)} alt={`Captura de la v${to}`} className="block w-full" />
             <div className="absolute inset-0 overflow-hidden" style={{ clipPath: `inset(0 ${100 - cut}% 0 0)` }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={fileUrl(before.pathname)} alt="" className="block w-full bg-white" />
             </div>
-            <div className="absolute inset-y-0 w-0.5 bg-accent" style={{ left: `${cut}%` }} />
+            <div aria-hidden className="absolute inset-y-0 w-0.5 bg-accent" style={{ left: `${cut}%` }} />
           </div>
-          <input type="range" min={0} max={100} value={cut} onChange={(e) => setCut(+e.target.value)} className="mt-2 w-full" />
-          <p className="flex justify-between text-xs text-muted"><span>← Antes</span><span>Ahora →</span></p>
+          <input
+            type="range"
+            min={0}
+            max={100}
+            value={cut}
+            onChange={(e) => setCut(+e.target.value)}
+            className="mt-3 w-full accent-[var(--accent)]"
+            aria-label={`Desliza para comparar la v${from} (izquierda) con la v${to} (derecha)`}
+          />
+          <p className="flex justify-between text-sm text-muted">
+            <span>Antes (v{from})</span>
+            <span>Ahora (v{to})</span>
+          </p>
         </div>
       )}
     </div>

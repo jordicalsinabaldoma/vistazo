@@ -3,6 +3,7 @@ import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 import { col } from "./db";
 import { forbidden, notFound, unauthorized } from "./http";
+import { clean } from "./untrusted";
 import type { ApiKey, Author, Project, Role, ShareLink, User } from "./model";
 
 const SESSION = "vz_session";
@@ -64,7 +65,7 @@ export async function startGuest(link: ShareLink, name: string) {
   const gid = randomToken(9);
   (await cookies()).set(
     GUEST,
-    await sign({ lid: link.id, pid: link.projectId, name, gid }, 7),
+    await sign({ lid: link.id, pid: link.projectId, name: clean(name, 60) || "Invitado", gid }, 7),
     cookieOpts(7),
   );
 }
@@ -72,7 +73,7 @@ export async function startGuest(link: ShareLink, name: string) {
 // ----- Actores -----
 export type Actor =
   | { kind: "user"; user: User }
-  | { kind: "guest"; linkId: string; projectId: string; name: string; gid: string }
+  | { kind: "guest"; linkId: string; projectId: string; name: string; gid: string; reviewId?: string }
   | { kind: "apikey"; key: ApiKey };
 
 export async function currentUser(): Promise<User | null> {
@@ -91,7 +92,7 @@ export async function currentGuest() {
   const link = ls.exists ? (ls.data() as ShareLink) : null;
   // Revocar el enlace corta el acceso al instante: se comprueba en cada petición.
   if (!link || link.revoked || (link.expiresAt && link.expiresAt < Date.now())) return null;
-  return { linkId: g.lid, projectId: g.pid, name: g.name, gid: g.gid };
+  return { linkId: g.lid, projectId: g.pid, name: g.name, gid: g.gid, reviewId: link.reviewId };
 }
 
 export async function actorFor(req: Request): Promise<Actor[]> {
@@ -119,6 +120,8 @@ export interface Access {
   actor: Actor;
   role: Role | "guest" | "agent";
   author: Author;
+  /** Si existe, el actor (un invitado) solo puede ver esa revisión. */
+  scope?: string;
   can: {
     view: boolean;
     comment: boolean;
@@ -151,7 +154,7 @@ export async function access(req: Request, projectId: string): Promise<Access> {
           comment: true,
           publish: role !== "reviewer",
           resolve: role !== "reviewer",
-          approve: true, // aprobar = usuario identificado y miembro del proyecto
+          approve: true, // aprobar = usuario identificado y miembro (salvo el autor de la revisión: ver verdict)
           manage: role === "owner",
         },
       };
@@ -172,6 +175,7 @@ export async function access(req: Request, projectId: string): Promise<Access> {
         actor: a,
         role: "guest",
         author: { kind: "guest", id: a.gid, name: a.name },
+        scope: a.reviewId,
         can: { view: true, comment: true, publish: false, resolve: false, approve: false, manage: false },
       };
   }
@@ -180,13 +184,18 @@ export async function access(req: Request, projectId: string): Promise<Access> {
 }
 
 const MSG: Record<string, string> = {
-  approve: "Solo un usuario identificado y miembro del proyecto puede aprobar",
+  approve: "Solo un usuario identificado y miembro de la app puede aprobar o pedir cambios",
   resolve: "Solo el equipo autor puede resolver comentarios",
-  publish: "Sin permiso para publicar revisiones",
+  publish: "Sin permiso para publicar ni editar revisiones",
   manage: "Solo el propietario puede cambiar esto",
   comment: "Sin permiso para comentar",
 };
 
 export function need(a: Access, what: keyof Access["can"]) {
   if (!a.can[what]) throw forbidden(MSG[what] ?? "Sin acceso");
+}
+
+/** Un invitado con enlace de revisión solo ve esa revisión. */
+export function needScope(a: Access, reviewId: string) {
+  if (a.scope && a.scope !== reviewId) throw forbidden("Tu enlace es de otra revisión");
 }

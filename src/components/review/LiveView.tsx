@@ -78,6 +78,18 @@ export default function LiveView({ ctx, url }: { ctx: Ctx; url: string }) {
     });
   }, [bridge, here, post, ctx]);
 
+  useEffect(() => {
+    if (!mode) return;
+    const k = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setMode(false);
+        if (bridge) post({ vz: "pick", on: false });
+      }
+    };
+    window.addEventListener("keydown", k);
+    return () => window.removeEventListener("keydown", k);
+  }, [mode, bridge, post]);
+
   const toggle = () => {
     const on = !mode;
     setMode(on);
@@ -88,38 +100,41 @@ export default function LiveView({ ctx, url }: { ctx: Ctx; url: string }) {
   return (
     <div>
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        <button className={`btn ${mode ? "btn-accent" : "btn-primary"}`} onClick={toggle} disabled={!ctx.data.me.can.comment}>
-          {mode ? (bridge ? "Haz clic en un elemento…" : "Haz clic donde quieras comentar…") : "Comentar sobre la web"}
-        </button>
-        <div className="flex rounded-md border border-line bg-card p-0.5 text-xs">
+        {ctx.data.me.can.comment && (
+          <button className={`btn ${mode ? "btn-quiet ring-2 ring-accent" : "btn-strong"}`} onClick={toggle} aria-pressed={mode}>
+            {mode ? (bridge ? "Toca un elemento (Esc para salir)" : "Toca donde quieras comentar") : "Comentar sobre la web"}
+          </button>
+        )}
+        <div className="segmented" role="group" aria-label="Tamaño de pantalla">
           {DEVICES.map(([l, w]) => (
-            <button key={l} onClick={() => setDevice(w)} className={`rounded px-2 py-1 ${device === w ? "bg-ink text-white" : ""}`}>
+            <button key={l} onClick={() => setDevice(w)} aria-selected={device === w} aria-pressed={device === w}>
               {l}
             </button>
           ))}
         </div>
-        <span className={`chip ${bridge ? "bg-okbg text-ok" : "bg-paper text-muted"}`} title="bridge.js en la app revisada">
-          {bridge ? "● Puente conectado: anclaje a elementos" : "○ Sin puente: anclaje por posición"}
+        <span className="text-xs text-muted" title={bridge ? "La app incluye bridge.js" : "La app no incluye bridge.js"}>
+          {bridge ? "Los comentarios se pegan al elemento que toques." : "Los comentarios se guardan por posición en la pantalla."}
         </span>
         <input
+          aria-label={bridge ? "Pantalla actual de la app" : "En qué pantalla estás (escríbela)"}
           className="input min-w-[200px] flex-1 font-mono text-xs"
           value={current}
           readOnly={bridge}
           onChange={(e) => setCurrent(e.target.value)}
           title={bridge ? "URL real de la app" : "Indica en qué pantalla estás (sin puente no se puede leer)"}
         />
-        <a className="btn" href={current} target="_blank" rel="noreferrer">
-          Abrir aparte ↗
+        <a className="btn" href={current} target="_blank" rel="noopener noreferrer">
+          Abrir aparte
         </a>
       </div>
-      <div className="flex justify-center rounded-xl border border-line bg-[repeating-linear-gradient(45deg,#ecebe6_0,#ecebe6_8px,#f5f4f0_8px,#f5f4f0_16px)] p-3">
-        <div className="relative h-[78vh] bg-card shadow-sm" style={{ width: device, maxWidth: "100%" }}>
-          <iframe ref={frame} src={url} title="App en vivo" className="h-full w-full rounded" onLoad={() => post({ vz: "ping" })} />
+      <div className="flex justify-center rounded-xl border border-line bg-sunken p-3">
+        <div className="relative h-[76dvh] overflow-hidden rounded-lg bg-white shadow-[0_2px_8px_rgb(var(--shadow)/0.12)]" style={{ width: device, maxWidth: "100%" }}>
+          <iframe ref={frame} src={url} title="La app que se revisa, en vivo" className="h-full w-full" onLoad={() => post({ vz: "ping" })} />
           {/* Capa para webs sin puente */}
           {mode && !bridge && (
             <div
               data-testid="live-overlay"
-              className="absolute inset-0 cursor-crosshair bg-accent/5 outline-2 outline-dashed outline-accent"
+              className="absolute inset-0 cursor-crosshair bg-accent/5 outline-2 -outline-offset-2 outline-dashed outline-accent"
               onClick={(e) => {
                 const r = e.currentTarget.getBoundingClientRect();
                 setMode(false);
@@ -142,6 +157,7 @@ export default function LiveView({ ctx, url }: { ctx: Ctx; url: string }) {
                   className={`pin z-10 ${c.status === "resolved" ? "pin-resolved" : ""}`}
                   style={{ left: `${a.x * 100}%`, top: `${a.y * 100}%` }}
                   title={c.body}
+                  aria-label={`Comentario ${ctx.numberOf(c)}: ${c.body.slice(0, 80)}`}
                 >
                   {ctx.numberOf(c)}
                 </button>
@@ -164,7 +180,9 @@ export default function LiveView({ ctx, url }: { ctx: Ctx; url: string }) {
         </div>
       </div>
       {live.length > here.length && (
-        <p className="mt-2 text-xs text-muted">{live.length - here.length} comentario(s) en vivo en otras pantallas: ver la lista.</p>
+        <p className="mt-2 text-sm text-muted">
+          {live.length - here.length === 1 ? "Hay 1 comentario en otra pantalla" : `Hay ${live.length - here.length} comentarios en otras pantallas`}: están en la lista de comentarios.
+        </p>
       )}
     </div>
   );

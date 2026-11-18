@@ -1,6 +1,7 @@
 // Núcleo de la CLI: cliente HTTP de Vistazo, subida de adjuntos, runner de capturas.
 // El runner corre en TU entorno (no en el backend alojado): Playwright necesita un
 // navegador real y las funciones serverless de Vercel no son sitio para eso.
+import { execFileSync } from "node:child_process";
 import { readFile, readdir, stat, mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { createRequire } from "node:module";
@@ -179,8 +180,42 @@ export async function fromDir(dir, cfg) {
   return [...flows.values()];
 }
 
-/** Sube los ficheros y publica la revisión. Misma API que el formulario. */
-export async function publish(api, project, { title, summary, liveUrl, previews, meta, flows, origin, log = console.error }) {
+/** Rama actual de git (o undefined fuera de un repo). Solo lee. */
+export function gitBranch(cwd = process.cwd()) {
+  try {
+    const b = execFileSync("git", ["rev-parse", "--abbrev-ref", "HEAD"], { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
+    return b && b !== "HEAD" ? b : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Enlace a la PR abierta de la rama actual, si `gh` está instalado y autenticado.
+ * Solo LEE (gh pr view): nunca crea ni toca PRs. Sin gh, o sin PR, devuelve undefined.
+ */
+export function prForBranch(cwd = process.cwd()) {
+  try {
+    const u = execFileSync("gh", ["pr", "view", "--json", "url", "-q", ".url"], { cwd, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"], timeout: 8000 }).trim();
+    return /^https:\/\//.test(u) ? u : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Revisión abierta de una rama (o null). */
+export async function reviewForBranch(api, project, branch) {
+  if (!branch) return null;
+  const { reviews } = await api.get(`/api/projects/${project}/reviews`);
+  return reviews.find((r) => r.branch === branch && r.status === "open") ?? null;
+}
+
+/**
+ * Sube los ficheros y publica una versión. Misma API que el formulario.
+ * `review`: { id } para una revisión concreta, o { branch, title, purpose, testData, prUrl }:
+ * la versión va a la revisión abierta de esa rama, o crea una nueva.
+ */
+export async function publish(api, project, { title, summary, liveUrl, previews, meta, flows, origin, review = {}, log = console.error }) {
   const out = [];
   for (const f of flows) {
     const steps = [];
@@ -194,11 +229,16 @@ export async function publish(api, project, { title, summary, liveUrl, previews,
     }
     out.push({ key: f.key, title: f.title, description: f.description, steps });
   }
-  return api.post(`/api/projects/${project}/revisions`, { title, summary, liveUrl, previews, meta, flows: out, source: "agent" });
+  return api.post(`/api/projects/${project}/revisions`, { title, summary, liveUrl, previews, meta, flows: out, source: "agent", review });
 }
 
-export async function latestRevision(api, project) {
-  const { revisions } = await api.get(`/api/projects/${project}/revisions`);
-  if (!revisions.length) throw new Error("El proyecto no tiene revisiones");
-  return revisions[0].id;
+/**
+ * Versión de la que leer el feedback: la última de la revisión de la rama actual;
+ * si no hay, la de la revisión abierta más reciente de la app.
+ */
+export async function latestRevision(api, project, branch = gitBranch()) {
+  const { reviews } = await api.get(`/api/projects/${project}/reviews`);
+  const r = reviews.find((x) => x.branch === branch && x.status === "open") ?? reviews.find((x) => x.status === "open") ?? reviews[0];
+  if (!r) throw new Error("La app no tiene revisiones");
+  return r.latestRevisionId;
 }

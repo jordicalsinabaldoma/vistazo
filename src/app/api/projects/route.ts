@@ -12,7 +12,7 @@ export const GET = handle(async () => {
   const projects = snap.docs
     .map((d) => d.data() as Project)
     .sort((a, b) => b.createdAt - a.createdAt)
-    .map((p) => ({ id: p.id, name: p.name, role: p.members[user.id], revisionCount: p.revisionCount }));
+    .map((p) => ({ id: p.id, name: p.name, role: p.members[user.id], reviewCount: p.reviewCount ?? null, revisionCount: p.revisionCount }));
   return ok({ projects });
 });
 
@@ -32,6 +32,7 @@ export const POST = handle(async (req: Request) => {
     createdAt: Date.now(),
     createdBy: user.id,
     revisionCount: 0,
+    reviewCount: 0,
   };
   await col.projects().doc(p.id).set(p);
   return ok({ id: p.id });

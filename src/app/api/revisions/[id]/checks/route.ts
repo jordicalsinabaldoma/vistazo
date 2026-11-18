@@ -12,15 +12,15 @@ const schema = z.object({
   note: z.string().max(500).optional(),
 });
 
-// Checklist de recorridos críticos: cualquiera que pruebe (también invitados) marca.
+// Qué probar (flujos críticos de la app + los de esta revisión): cualquiera que pruebe, también invitados, marca.
 export const POST = handle(async (req: Request, { params }: Ctx) => {
   const { id } = await params;
-  const { a } = await revAccess(req, id);
+  const { a, review } = await revAccess(req, id);
   need(a, "comment");
   const b = schema.parse(await req.json());
-  if (!a.project.checklist.some((c) => c.id === b.itemId)) throw bad("Ese punto no está en la checklist");
+  if (![...a.project.checklist, ...(review.testPlan ?? [])].some((c) => c.id === b.itemId)) throw bad("Ese punto no está en lo que hay que probar");
   await col.revisions().doc(id).update({
-    [`checks.${b.itemId}`]: { status: b.status, by: a.author.name, at: Date.now(), note: b.note },
+    [`checks.${b.itemId}`]: { status: b.status, by: a.author.name.slice(0, 80), at: Date.now(), note: b.note },
   });
   return ok({ ok: true });
 });
